@@ -12,8 +12,12 @@ RamLink is a campus club discovery and management app for Farmingdale State Coll
 
 ## Changes
 
-- Set up the shared RamLink frontend foundation.
-- Added global styling, brand colors, fonts, and reusable layout shells.
-- Added shared TypeScript types, utility functions, and mock frontend data.
-- Added reusable UI primitives, page headers, status components, and card components.
-- Prepared the project structure so public, student, club officer, and admin pages can be implemented on separate branches.
+----- Sam -------
+
+---- Nick ------
+
+----Daniel ------
+
+----- Huma -----
+
+----- Dimitra ----
