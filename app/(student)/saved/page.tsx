@@ -18,3 +18,27 @@ export default function SavedPage() {
  <section className="grid gap-4 md:grid-cols-2">
 <StatCard label="Saved clubs" value={savedClubs.length} detail="Communities to revisit" icon={<Users className="h-5 w-5" />} />
 <StatCard label="Saved events" value={savedEvents.length} detail="Activities to review" icon={<CalendarDays className="h-5 w-5" />} color="gold" />
+</section>
+ <section className="space-y-4">
+ <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-brand-ink">Saved clubs</h2>
+ {savedClubs.length ? (
+ <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+ {savedClubs.map((club) => (
+ <ClubCard key={club.id} club={club} />
+ ))}
+ </div>
+ ) : (
+ <EmptyState icon={<Bookmark className="h-5 w-5" />} title="No saved clubs yet" description="Save clubs while browsing the directory and they will appear here." />
+ )}
+ </section>
+ <section className="space-y-4">
+ <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-brand-ink">Saved events</h2>
+ {savedEvents.length ? (
+ savedEvents.map((event) => <EventCard key={event.id} event={event} />)
+ ) : (
+ <EmptyState icon={<CalendarDays className="h-5 w-5" />} title="No saved events yet" description="Save events from the events page to keep them close." />
+ )}
+ </section>
+ </div>
+ );
+ }
