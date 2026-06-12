@@ -19,3 +19,24 @@ export default function RegisterPage() {
  aside={
  <div className="rounded-[22px] border border-brand-mist bg-white p-5 shadow-lift">
  <div className="flex items-center gap-3"
+<div className="grid h-12 w-12 place-items-center rounded-[14px] bg-amber-50 text-amber-600">
+ <Sparkles className="h-6 w-6" />
+ </div>
+ <div>
+ <p className="font-display text-base font-semibold text-brand-ink">Simple setup</p>
+ <p className="text-sm text-brand-muted">Use your school email and start browsing.</p>
+ </div>
+ </div>
+ </div>
+ }
+ />
+ <Card className="mx-auto w-full max-w-md">
+ <CardContent className="p-6 md:p-8">
+ <p className="text-sm font-semibold text-brand-green">Student account</p>
+ <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.02em] text-brand-ink">
+ Create your account
+ </h1>
+ <p className="mt-2 text-sm leading-6 text-brand-muted">
+ Join RamLink with your Farmingdale email.
+ </p>
+ <form className="mt-7 space-y-4"></form>
