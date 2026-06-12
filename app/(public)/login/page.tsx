@@ -47,3 +47,24 @@ export default function LoginPage() {
  <label className="block">
  <span className="text-sm font-semibold text-brand-ink">Password</span>
  <Input className="mt-2" placeholder="Enter password" type="password" />
+</label>
+ <Button className="w-full" type="submit">
+ <LogIn className="h-4 w-4" />
+ Sign In
+ </Button>
+ </form>
+ <p className="mt-5 text-center text-sm text-brand-muted">
+ New to RamLink?{" "}
+ <Link href="/register" className="font-semibold text-brand-forest hover:text-brand-green">
+ Create account
+ </Link>
+ </p>
+ <Link href="/clubs" className="mt-6 inline-flex items-center justify-center gap-2 text-sm font-semibold text-brand-forest hover:text-brand-green">
+ Browse first
+ <ArrowRight className="h-4 w-4" />
+ </Link>
+</CardContent>
+ </Card>
+ </section>
+ </div>
+ ); }
