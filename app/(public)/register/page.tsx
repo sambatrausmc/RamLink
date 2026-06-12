@@ -40,3 +40,36 @@ export default function RegisterPage() {
  Join RamLink with your Farmingdale email.
  </p>
  <form className="mt-7 space-y-4"></form>
+ <label className="block">
+ <span className="text-sm font-semibold text-brand-ink">Full name</span>
+ <Input className="mt-2" placeholder="Sam Batra" />
+ </label>
+ <label className="block">
+ <span className="text-sm font-semibold text-brand-ink">School email</span>
+ <Input className="mt-2" placeholder="name@farmingdale.edu" type="email" />
+ </label>
+ <label className="block">
+ <span className="text-sm font-semibold text-brand-ink">Password</span>
+ <Input className="mt-2" placeholder="Create password" type="password" />
+ </label>
+ <Button className="w-full" type="submit">
+ <UserPlus className="h-4 w-4" />
+ Create Account
+ </Button>
+ </form>
+ <p className="mt-5 text-center text-sm text-brand-muted">
+ Already have an account?{" "}
+ <Link href="/login" className="font-semibold text-brand-forest hover:text-brand-green">
+ Sign in
+ </Link>
+ </p
+<Link href="/clubs" className="mt-6 inline-flex items-center justify-center gap-2 text-sm font-semibold text-brand-forest hover:text-brand-green">
+ Explore clubs first
+ <ArrowRight className="h-4 w-4" />
+ </Link>
+ </CardContent>
+ </Card>
+ </section>
+ </div>
+ );
+}
