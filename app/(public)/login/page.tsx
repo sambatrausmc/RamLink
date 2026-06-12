@@ -30,3 +30,20 @@ export default function LoginPage() {
  </div>
  }
  />
+ <Card className="mx-auto w-full max-w-md">
+ <CardContent className="p-6 md:p-8">
+ <p className="text-sm font-semibold text-brand-green">Student sign in</p>
+ <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.02em] text-brand-ink">
+ Continue to RamLink
+ </h1>
+ <p className="mt-2 text-sm leading-6 text-brand-muted">
+ Keep track of the campus communities you care about.
+ </p>
+ <form className="mt-7 space-y-4">
+ <label className="block">
+ <span className="text-sm font-semibold text-brand-ink">School email</span>
+ <Input className="mt-2" placeholder="name@farmingdale.edu" type="email" />
+ </label>
+ <label className="block">
+ <span className="text-sm font-semibold text-brand-ink">Password</span>
+ <Input className="mt-2" placeholder="Enter password" type="password" />
