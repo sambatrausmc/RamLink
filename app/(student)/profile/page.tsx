@@ -51,3 +51,45 @@ export default function ProfilePage() {
     <span className="font-semibold text-brand-muted">Major</span>
     <span className="text-right font-medium text-brand-ink">{currentStudent.major}</span>
     </div>
+    <div className="h-px bg-brand-surface" />
+     <div className="flex items-start justify-between gap-2">
+     <span className="font-semibold text-brand-muted">Class year</span>
+     <span className="text-right font-medium text-brand-ink">{currentStudent.classYear}</span>
+     </div>
+     </div>
+     </CardContent>
+     </Card>
+     <div className="space-y-6">
+     <Card>
+     <CardContent>
+     <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-brand-ink">Interests</h2>
+     <div className="mt-4 flex flex-wrap gap-2">
+     {currentStudent.interests.map((interest) => (
+     <Badge key={interest} tone="green">
+     {interest}
+     </Badge>
+     ))}
+     </div>
+     </CardContent>
+     </Card>
+     <Card>
+     <CardContent>
+     <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-brand-ink">Joined clubs</h2>
+     <div className="mt-4 divide-y divide-brand-surface">
+     {joinedClubs.map((club) => (
+     <div key={club.id} className="flex items-center justify-between py-3">
+     <div>
+     <p className="font-semibold text-brand-ink">{club.name}</p>
+     <p className="text-sm text-brand-muted">{club.category}</p>
+     </div>
+     <Badge tone="green">Member</Badge>
+     </div>
+     ))}
+     </div>
+     </CardContent>
+     </Card>
+     </div>
+     </section>
+     </div>
+     );
+    }
