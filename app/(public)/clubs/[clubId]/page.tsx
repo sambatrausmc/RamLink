@@ -27,10 +27,10 @@ type ClubProfilePageProps = {
 export default async function ClubProfilePage({ params }: ClubProfilePageProps) {
     // grab the specific club ID from the URL
     const { clubId } = await params;
-    
+
     // fetch the main club data
     const club = getClubById(clubId);
-    
+
     // if someone types a random club name in the URL that doesn't exist, boot them to the 404 page
     if (!club) {
         notFound();
@@ -45,7 +45,7 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
         // main background wrapper
         <div className="bg-brand-surface/70">
             <div className="mx-auto w-full max-w-[1180px] space-y-10 px-5 py-12 md:px-6 md:py-16">
-                
+
                 {/* huge hero section at the top detailing the club */}
                 <PageHero
                     eyebrow={club.category}
@@ -97,14 +97,14 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
                     }
                 />
 
-                {/* Main content grid: 
+                {/* Main content grid:
                   Splits the page into a wide left column for details and a narrower right column for announcements/CTAs.
                 */}
                 <section className="grid gap-6 xl:grid-cols-[1fr_360px]">
-                    
+
                     {/* LEFT COLUMN */}
                     <div className="space-y-6">
-                        
+
                         {/* tags and contact email */}
                         <Card>
                             <CardContent>
@@ -155,7 +155,7 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
 
                     {/* RIGHT COLUMN */}
                     <aside className="space-y-6">
-                        
+
                         {/* big green call-to-action box to encourage signups */}
                         <Card className="bg-brand-forest text-white">
                             <CardContent>
