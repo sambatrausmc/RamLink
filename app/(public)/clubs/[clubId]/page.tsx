@@ -70,7 +70,7 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
                                 className="inline-flex items-center justify-center rounded-[11px] border border-brand-mist bg-white px-5 py-3.5 text-[15px] font-semibold leading-none text-brand-forest transition hover:-translate-y-0.5 hover:border-brand-greenLight hover:bg-brand-surface"
                             >
                                 Create Account
-                            </Link> 
+                            </Link>
                         </>
                     }
                     aside={
