@@ -24,3 +24,32 @@ export default function ClubProfileManagementPage() {
  <span className="text-sm font-semibold text-brand-ink">Category</span>
  <Input className="mt-2" defaultValue={club?.category} />
  </label
+<label className="block">
+ <span className="text-sm font-semibold text-brand-ink">Meeting schedule</span>
+ <Input className="mt-2" defaultValue={club?.meetingSchedule} />
+ </label>
+ <label className="block">
+ <span className="text-sm font-semibold text-brand-ink">Meeting location</span>
+ <Input className="mt-2" defaultValue={club?.meetingLocation} />
+ </label>
+ <label className="block">
+ <span className="text-sm font-semibold text-brand-ink">Contact email</span>
+ <Input className="mt-2" defaultValue={club?.contactEmail} />
+ </label>
+ <label className="block">
+ <span className="text-sm font-semibold text-brand-ink">Description</span>
+ <textarea
+ className="mt-2 min-h-32 w-full rounded-[12px] border border-brand-mist bg-white px-3.5 py-3 text-sm text-brand-ink outline-none transition focus:border-brand-green focus:ring-2 focus:ring-brand-green/15"
+ defaultValue={club?.description}
+ />
+ </label>
+ <Button className="w-fit">
+ <Save className="h-4 w-4" />
+ Save changes
+ </Button>
+ </form>
+ </CardContent>
+ </Card>
+ </div>
+ );
+}
