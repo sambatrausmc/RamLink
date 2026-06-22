@@ -23,7 +23,7 @@ export default function ClubProfileManagementPage() {
  <label className="block">
  <span className="text-sm font-semibold text-brand-ink">Category</span>
  <Input className="mt-2" defaultValue={club?.category} />
- </label
+ </label>
 <label className="block">
  <span className="text-sm font-semibold text-brand-ink">Meeting schedule</span>
  <Input className="mt-2" defaultValue={club?.meetingSchedule} />
