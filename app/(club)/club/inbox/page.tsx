@@ -1,10 +1,12 @@
-import { InquiryCard } from "@/components/cards/inquiry-card";
+import { InquiryWorkflowCard } from "@/components/club/inquiry-workflow-card";
 import { PageHeader } from "@/components/common/page-header";
 import { inquiries } from "@/lib/mock-data";
+
 export default function ClubInboxPage() {
   const clubInquiries = inquiries.filter(
     (inquiry) => inquiry.clubId === "cs-club",
   );
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -14,7 +16,7 @@ export default function ClubInboxPage() {
       />
       <section className="space-y-4">
         {clubInquiries.map((inquiry) => (
-          <InquiryCard key={inquiry.id} inquiry={inquiry} />
+          <InquiryWorkflowCard key={inquiry.id} inquiry={inquiry} />
         ))}
       </section>
     </div>
