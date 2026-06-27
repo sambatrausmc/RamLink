@@ -55,6 +55,36 @@ service cloud.firestore {
       allow delete: if hasRole("admin");
     }
 
+    match /joinRequests/{requestId} {
+      allow create: if isSignedIn()
+        && request.resource.data.studentId == request.auth.uid;
+      allow read: if isSignedIn()
+        && (resource.data.studentId == request.auth.uid || isOfficerOrAdmin());
+      allow update: if isOfficerOrAdmin();
+      allow delete: if hasRole("admin");
+    }
+
+    match /inquiries/{inquiryId} {
+      allow create: if isSignedIn()
+        && request.resource.data.studentId == request.auth.uid;
+      allow read: if isSignedIn()
+        && (resource.data.studentId == request.auth.uid || isOfficerOrAdmin());
+      allow update: if isOfficerOrAdmin();
+      allow delete: if hasRole("admin");
+    }
+
+    match /notifications/{notificationId} {
+      allow read, update: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isOfficerOrAdmin();
+      allow delete: if hasRole("admin");
+    }
+
+    match /reports/{reportId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if hasRole("admin");
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
