@@ -42,7 +42,7 @@ export default function RegisterPage() {
             <form className="mt-7 space-y-4">
               <label className="block">
                 <span className="text-sm font-semibold text-brand-ink">Full name</span>
-                <Input className="mt-2" placeholder="Sam Batra" />
+                <Input className="mt-2" placeholder="Jordan Ellis" />
               </label>
               <label className="block">
                 <span className="text-sm font-semibold text-brand-ink">School email</span>

@@ -11,9 +11,9 @@ import type {
   StudentProfile,
 } from "@/lib/types";
 export const currentStudent: StudentProfile = {
-  id: "student-sam",
-  displayName: "Sam Batra",
-  email: "sam.batra@farmingdale.edu",
+  id: "student-jordan",
+  displayName: "Jordan Ellis",
+  email: "jordan.ellis@example.edu",
   major: "Computer Science",
   classYear: "Senior",
   interests: ["Technology", "Leadership", "Community Service"],
@@ -232,7 +232,7 @@ export const joinRequests: JoinRequest[] = [
   {
     id: "join-1",
     clubId: "robotics",
-    studentId: "student-sam",
+    studentId: "student-jordan",
     message: "I am interested in helping with the summer prototype and learning more about sensors.",
     status: "pending",
     createdAt: "2026-06-03",
@@ -240,7 +240,7 @@ export const joinRequests: JoinRequest[] = [
   {
     id: "join-2",
     clubId: "cs-club",
-    studentId: "student-huma",
+    studentId: "student-avery",
     message: "I want to join project nights and help with workshops.",
     status: "pending",
     createdAt: "2026-06-02",
@@ -248,7 +248,7 @@ export const joinRequests: JoinRequest[] = [
   {
     id: "join-3",
     clubId: "business-leaders",
-    studentId: "student-nick",
+    studentId: "student-taylor",
     message: "I would like to attend the resume lab and join the club.",
     status: "approved",
     createdAt: "2026-05-31",
@@ -287,7 +287,7 @@ export const inquiries: ClubInquiry[] = [
   {
     id: "inquiry-1",
     clubId: "cs-club",
-    studentId: "student-dimitra",
+    studentId: "student-morgan",
     subject: "Can beginners attend Hack Night?",
     message: "I am new to coding. Is Hack Night beginner friendly?",
     status: "open",
@@ -304,7 +304,7 @@ export const inquiries: ClubInquiry[] = [
   {
     id: "inquiry-2",
     clubId: "robotics",
-    studentId: "student-sam",
+    studentId: "student-jordan",
     subject: "Do I need lab experience?",
     message: "I want to join a build session but have not used the lab before.",
     status: "resolved",
@@ -342,9 +342,9 @@ export const reports: Report[] = [
 export const studentDirectory = [
   currentStudent,
   {
-    id: "student-huma",
-    displayName: "Huma Rahman",
-    email: "huma.rahman@farmingdale.edu",
+    id: "student-avery",
+    displayName: "Avery Collins",
+    email: "avery.collins@example.edu",
     major: "Computer Science",
     classYear: "Senior",
     interests: ["Technology", "Business"],
@@ -353,9 +353,9 @@ export const studentDirectory = [
     savedEventIds: [],
   },
   {
-    id: "student-nick",
-    displayName: "Nick Rivera",
-    email: "nick.rivera@farmingdale.edu",
+    id: "student-taylor",
+    displayName: "Taylor Brooks",
+    email: "taylor.brooks@example.edu",
     major: "Business Management",
     classYear: "Senior",
     interests: ["Business", "Leadership"],
@@ -364,9 +364,9 @@ export const studentDirectory = [
     savedEventIds: [],
   },
   {
-    id: "student-dimitra",
-    displayName: "Dimitra Pappas",
-    email: "dimitra.pappas@farmingdale.edu",
+    id: "student-morgan",
+    displayName: "Morgan Lee",
+    email: "morgan.lee@example.edu",
     major: "Computer Science",
     classYear: "Senior",
     interests: ["Technology"],
