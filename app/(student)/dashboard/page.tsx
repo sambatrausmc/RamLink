@@ -42,3 +42,36 @@ export default function StudentDashboardPage() {
   </Link>
   }
   />
+<section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+ <StatCard label="Joined clubs" value={joinedClubs.length} detail="Approved memberships" icon={<Users className="h-5 w-5" />} />
+ <StatCard label="Saved clubs" value={currentStudent.savedClubIds.length} detail="Bookmarked communities" icon={<Users className="h-5 w-5" />} color="gold" />
+ <StatCard label="Upcoming events" value={upcomingEvents.length} detail="Campus activities" icon={<CalendarDays className="h-5 w-5" />} />
+ <StatCard label="Unread updates" value={unreadNotifications.length} detail="Need review" icon={<Bell className="h-5 w-5" />} color="gold" />
+ </section>
+ <section className="grid gap-6 xl:grid-cols-[1fr_0.85fr]">
+ <div className="space-y-4">
+ <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-brand-ink">Upcoming events</h2>
+ {upcomingEvents.map((event) => (
+ <EventCard key={event.id} event={event} />
+ ))}
+ </div>
+ <div className="space-y-4">
+ <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-brand-ink">Join request status</h2>
+ {studentRequests.map((request) => {
+ const club = getClubById(request.clubId);
+ return (
+ <Card key={request.id}>
+ <CardContent>
+ <div className="flex items-start justify-between gap-3">
+ <div>
+ <p className="font-display font-semibold text-brand-ink">{club?.name ?? "Club request"}</p>
+ <p className="mt-2 text-sm leading-6 text-brand-muted">{request.message}</p>
+ <p className="mt-2 text-xs font-medium text-brand-muted/70">Submitted {request.createdAt}</p>
+ </div>
+ <StatusBadge status={request.status} />
+ </div>
+ </CardContent>
+ </Card>
+ );
+ })}
+ </div>
