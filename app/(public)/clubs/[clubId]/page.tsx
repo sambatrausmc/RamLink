@@ -7,6 +7,7 @@ import { ArrowRight, CalendarDays, Mail, MapPin, Users } from "lucide-react";
 import { AnnouncementCard } from "@/components/cards/announcement-card";
 import { EventCard } from "@/components/cards/event-card";
 import { ResourceCard } from "@/components/cards/resource-card";
+import { ClubProfileActions } from "@/components/club/club-profile-actions";
 import { PageHero } from "@/components/common/page-hero";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -155,6 +156,8 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
 
                     {/* RIGHT COLUMN */}
                     <aside className="space-y-6">
+                        {/* Mocked student action panel for join requests and official club questions. */}
+                        <ClubProfileActions club={club} />
 
                         {/* big green call-to-action box to encourage signups */}
                         <Card className="bg-brand-forest text-white">
