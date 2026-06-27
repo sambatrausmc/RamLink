@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasRole(role) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().data.role == role;
+    }
+
+    function isOfficerOrAdmin() {
+      return hasRole("clubOfficer") || hasRole("admin");
+    }
+
+    match /clubs/{clubId} {
+      allow read: if true;
+      allow write: if hasRole("admin");
+    }
+
+    match /users/{userId} {
+      allow create: if isSelf(userId);
+      allow read, update: if isSelf(userId) || hasRole("admin");
+      allow delete: if hasRole("admin");
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
