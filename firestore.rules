@@ -29,6 +29,26 @@ service cloud.firestore {
       allow write: if hasRole("admin");
     }
 
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isOfficerOrAdmin();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isOfficerOrAdmin();
+    }
+
+    match /resources/{resourceId} {
+      allow read: if true;
+      allow write: if isOfficerOrAdmin();
+    }
+
+    match /interests/{interestId} {
+      allow read: if true;
+      allow write: if hasRole("admin");
+    }
+
     match /users/{userId} {
       allow create: if isSelf(userId);
       allow read, update: if isSelf(userId) || hasRole("admin");
