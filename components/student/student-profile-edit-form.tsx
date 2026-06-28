@@ -20,6 +20,7 @@ export function StudentProfileEditForm({ student, availableInterests }: StudentP
  ? current.filter((interest) => interest !== interestName)
  : [...current, interestName],
  );
+}
 return (
  <Card>
  <CardContent>
