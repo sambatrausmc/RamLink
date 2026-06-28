@@ -3,7 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/common/page-header";
 import { StatCard } from "@/components/common/stat-card";
-import { clubs, currentStudent } from "@/lib/mock-data";
+import { StudentProfileEditForm } from "@/components/student/student-profile-edit-form";
+import { clubs, currentStudent, interests } from "@/lib/mock-data";
 export default function ProfilePage() {
   const joinedClubs = clubs.filter((club) => currentStudent.joinedClubIds.includes(club.id));
   const initials = currentStudent.displayName
@@ -60,6 +61,10 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
         <div className="space-y-6">
+            <StudentProfileEditForm
+            student={currentStudent}
+            availableInterests={interests}
+          />
           <Card>
             <CardContent>
               <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-brand-ink">Interests</h2>
