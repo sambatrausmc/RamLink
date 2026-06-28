@@ -32,3 +32,20 @@ return (
  </div>
  {saved ? <Badge tone="green">Preview saved</Badge> : null}
  </div>
+<form
+ className="mt-5 grid gap-4 md:grid-cols-2"
+ onSubmit={(event) => {
+ event.preventDefault();
+ setSaved(true);
+ }}
+ >
+ <label className="block">
+ <span className="text-sm font-semibold text-brand-ink">Display name</span>
+ <Input className="mt-2" defaultValue={student.displayName} onChange={() => setSaved(false)} />
+ </label>
+ <label className="block">
+ <span className="text-sm font-semibold text-brand-ink">School email</span>
+ <Input className="mt-2" defaultValue={student.email} readOnly />
+ </label>
+ <label className="block">
+ <span className="text-sm font-semibold text-brand-ink">Major</span>
