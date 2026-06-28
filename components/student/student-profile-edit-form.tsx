@@ -70,3 +70,19 @@ return (
   : "border border-brand-mist bg-white text-brand-muted hover:border-brand-greenLight hover:text-brand-forest"
   }`}
   onClick={() => toggleInterest(interest.name)}
+  >
+   {interest.name}
+   </button>
+   );
+   })}
+   </div>
+   </div>
+   <Button className="w-fit" type="submit">
+   <Save className="h-4 w-4" />
+   Save preview
+   </Button>
+   </form>
+   </CardContent>
+   </Card>
+   );
+  }
