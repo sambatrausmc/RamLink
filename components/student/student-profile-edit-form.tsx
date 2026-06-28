@@ -49,3 +49,24 @@ return (
  </label>
  <label className="block">
  <span className="text-sm font-semibold text-brand-ink">Major</span>
+ <Input className="mt-2" defaultValue={student.major} onChange={() => setSaved(false)} />
+  </label>
+  <label className="block">
+  <span className="text-sm font-semibold text-brand-ink">Class year</span>
+  <Input className="mt-2" defaultValue={student.classYear} onChange={() => setSaved(false)} />
+  </label>
+  <div className="md:col-span-2">
+  <p className="text-sm font-semibold text-brand-ink">Interests</p>
+  <div className="mt-3 flex flex-wrap gap-2">
+  {availableInterests.map((interest) => {
+  const selected = selectedInterests.includes(interest.name);
+  return (
+  <button
+  key={interest.id}
+  type="button"
+  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+  selected
+  ? "bg-brand-forest text-white"
+  : "border border-brand-mist bg-white text-brand-muted hover:border-brand-greenLight hover:text-brand-forest"
+  }`}
+  onClick={() => toggleInterest(interest.name)}
