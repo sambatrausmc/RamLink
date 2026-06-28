@@ -75,3 +75,36 @@ export default function StudentDashboardPage() {
  );
  })}
  </div>
+ </section>
+  <section className="grid gap-6 xl:grid-cols-[1fr_0.85fr]">
+  <div className="space-y-4">
+  <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-brand-ink">Suggested clubs</h2>
+  <div className="grid gap-5 md:grid-cols-2">
+  {suggestedClubs.map((club) => (
+  <ClubCard key={club.id} club={club} showStatus />
+  ))}
+  </div>
+  </div>
+  <div className="space-y-4">
+  <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-brand-ink">Notification summary</h2>
+  <div className="space-y-3">
+  {notifications.slice(0, 3).map((notification) => (
+  <NotificationItem key={notification.id} notification={notification} />
+  ))}
+  </div>
+  </div>
+  </section>
+  <section className="space-y-4">
+  <div className="flex items-center gap-2">
+  <ClipboardList className="h-5 w-5 text-brand-green" />
+  <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-brand-ink">Recent club announcements</h2>
+  </div>
+  <div className="grid gap-4 md:grid-cols-2">
+  {recentAnnouncements.map((announcement) => (
+  <AnnouncementCard key={announcement.id} announcement={announcement} />
+  ))}
+  </div>
+  </section>
+  </div>
+  );
+ }
