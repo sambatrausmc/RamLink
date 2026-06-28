@@ -12,3 +12,5 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
  <WorkspaceShell roleLabel="Student Mode" navItems={studentNav}>
  {children}
  </WorkspaceShell>
+ );
+ }
