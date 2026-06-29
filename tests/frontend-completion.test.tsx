@@ -27,9 +27,9 @@ describe("remaining frontend completion", () => {
 
   it("filters club members by major or name", () => {
     const filteredByMajor = filterMembers(studentDirectory, "business");
-    const filteredByName = filterMembers(studentDirectory, "huma");
-    expect(filteredByMajor.map((member) => member.displayName)).toContain("Nick Rivera");
-    expect(filteredByName.map((member) => member.displayName)).toEqual(["Huma Rahman"]);
+    const filteredByName = filterMembers(studentDirectory, "avery");
+    expect(filteredByMajor.map((member) => member.displayName)).toContain("Taylor Brooks");
+    expect(filteredByName.map((member) => member.displayName)).toEqual(["Avery Collins"]);
   });
 
   it("creates mocked inquiry replies and resolved inquiry state", () => {
