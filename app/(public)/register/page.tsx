@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Sparkles, UserPlus } from "lucide-react";
+import { RegisterForm } from "@/components/auth/register-form";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { PageHero } from "@/components/common/page-hero";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 export default function RegisterPage() {
   return (
     <div className="bg-[radial-gradient(60%_70%_at_10%_0%,rgba(240,180,41,0.1),transparent_60%)]">
@@ -39,24 +38,9 @@ export default function RegisterPage() {
             <p className="mt-2 text-sm leading-6 text-brand-muted">
               Join RamLink with your Farmingdale email.
             </p>
-            <form className="mt-7 space-y-4">
-              <label className="block">
-                <span className="text-sm font-semibold text-brand-ink">Full name</span>
-                <Input className="mt-2" placeholder="Jordan Ellis" />
-              </label>
-              <label className="block">
-                <span className="text-sm font-semibold text-brand-ink">School email</span>
-                <Input className="mt-2" placeholder="name@farmingdale.edu" type="email" />
-              </label>
-              <label className="block">
-                <span className="text-sm font-semibold text-brand-ink">Password</span>
-                <Input className="mt-2" placeholder="Create password" type="password" />
-              </label>
-              <Button className="w-full" type="submit">
-                <UserPlus className="h-4 w-4" />
-                Create Account
-              </Button>
-            </form>
+
+            <RegisterForm />
+            
             <p className="mt-5 text-center text-sm text-brand-muted">
               Already have an account?{" "}
               <Link href="/login" className="font-semibold text-brand-forest hover:text-brand-green">
