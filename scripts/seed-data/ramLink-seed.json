@@ -1,0 +1,24 @@
+{
+  "clubs": [
+    {
+      "name": "Computer Programming Club",
+      "description": "A community for students interested in coding, software development, and tech networking.",
+      "category": "Academic",
+      "memberCount": 42
+    },
+    {
+      "name": "Campus Activities Board",
+      "description": "Planning and organizing student events across campus.",
+      "category": "Student Life",
+      "memberCount": 15
+    }
+  ],
+  "events": [
+    {
+      "title": "Fall Hackathon",
+      "description": "Join us for a 24-hour coding competition with free food and prizes!",
+      "location": "Campus Center",
+      "date": "2026-09-15T10:00:00Z"
+    }
+  ]
+}
