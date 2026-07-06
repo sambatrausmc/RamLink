@@ -36,26 +36,25 @@ async function seedDatabase() {
   console.log("Starting database seed...");
 
   try {
-    // Loop through every single club in our mock data array one by one...
+    // Seed Clubs
     for (const club of data.clubs) {
-      // ...and add it as a brand new document inside the 'clubs' collection in Firestore!
-      await db.collection('clubs').add(club);
-      console.log(`Added club: ${club.name}`);
+      // Use the clubId from the JSON as the exact document ID
+      await db.collection('clubs').doc(club.clubId).set(club);
+      console.log(`Added/Updated club: ${club.name}`);
     }
 
-    // Do the exact same thing for our events array...
+    // Seed Events
     for (const event of data.events) {
-      // ...adding them to the 'events' collection.
-      await db.collection('events').add(event);
-      console.log(`Added event: ${event.title}`);
+      // Create a deterministic ID based on the event title and date
+      const eventId = `${event.title.toLowerCase().replace(/\s+/g, '-')}-${event.date.split('T')[0]}`;
+      await db.collection('events').doc(eventId).set(event);
+      console.log(`Added/Updated event: ${event.title}`);
     }
 
     console.log("Database successfully seeded!");
   } catch (error) {
-    // If Firebase gets mad (bad internet, wrong keys, etc.), catch it and print the error so we can fix it.
     console.error("Error seeding database:", error);
   }
-}
 
 // Actually run the function we just built!
 seedDatabase();
