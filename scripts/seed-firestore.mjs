@@ -38,8 +38,8 @@ async function seedDatabase() {
   try {
     // Seed Clubs
     for (const club of data.clubs) {
-      // Use the clubId from the JSON as the exact document ID
-      await db.collection('clubs').doc(club.clubId).set(club);
+      // Use the id from the JSON as the exact document ID
+      await db.collection('clubs').doc(club.id).set(club);
       console.log(`Added/Updated club: ${club.name}`);
     }
 
