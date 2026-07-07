@@ -1,0 +1,55 @@
+{
+  "interests": [
+    { "id": "technology", "name": "Technology", "category": "Technology" },
+    { "id": "leadership", "name": "Leadership", "category": "Leadership" }
+  ],
+  "clubs": [
+    {
+      "id": "cs-club",
+      "name": "Computer Programming Club",
+      "shortName": "CPC",
+      "category": "Technology",
+      "description": "A community for students interested in coding, software development, and tech networking.",
+      "meetingSchedule": "Every Tuesday at 6:00 PM",
+      "meetingLocation": "Lupton Hall, Room 130",
+      "contactEmail": "cpc@ramlink.example.com",
+      "tags": ["Coding", "Tech", "Networking"],
+      "memberCount": 42,
+      "isSuggested": true,
+      "membershipStatus": "approved"
+    }
+  ],
+  "users": [
+    {
+      "id": "student-demo",
+      "displayName": "Demo Student",
+      "email": "demo@farmingdale.edu",
+      "role": "student",
+      "major": "Computer Programming and Information Systems",
+      "classYear": "Senior",
+      "interests": ["Technology"],
+      "joinedClubIds": ["cs-club"],
+      "savedClubIds": [],
+      "savedEventIds": []
+    }
+  ],
+  "events": [
+    {
+      "id": "event-fall-hackathon",
+      "clubId": "cs-club",
+      "title": "Fall Hackathon",
+      "description": "Join us for a 24-hour coding competition with free food and prizes!",
+      "location": "Campus Center",
+      "date": "2026-09-15T10:00:00Z",
+      "startTime": "10:00 AM",
+      "endTime": "10:00 AM (Next Day)",
+      "rsvpCount": 115
+    }
+  ],
+  "announcements": [],
+  "resources": [],
+  "joinRequests": [],
+  "inquiries": [],
+  "notifications": [],
+  "reports": []
+}
