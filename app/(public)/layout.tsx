@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Hanken_Grotesk } from "next/font/google";
 // Import our new AuthProvider
 import { AuthProvider } from "@/components/auth/auth-provider";
-import "./globals.css";
+import "../globals.css";
 
 export const metadata: Metadata = {
   title: "RamLink",
