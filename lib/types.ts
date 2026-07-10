@@ -1,4 +1,5 @@
 export type UserRole = "student" | "clubOfficer" | "admin";
+
 export type ClubCategory =
   | "Academic"
   | "Business"
@@ -8,13 +9,16 @@ export type ClubCategory =
   | "Leadership"
   | "Recreation"
   | "Technology";
+
 export type RequestStatus = "pending" | "approved" | "rejected";
 export type NotificationStatus = "read" | "unread";
 export type InquiryStatus = "open" | "resolved";
 export type ReportStatus = "new" | "reviewing" | "dismissed" | "removed";
 export type ResourceType = "Form" | "Waiver" | "Guide" | "Link" | "Document";
+
 export type StudentProfile = {
   id: string;
+  role?: UserRole;
   displayName: string;
   email: string;
   major: string;
@@ -23,7 +27,9 @@ export type StudentProfile = {
   joinedClubIds: string[];
   savedClubIds: string[];
   savedEventIds: string[];
+  rsvpedEventIds?: string[];
 };
+
 export type Club = {
   id: string;
   name: string;
@@ -40,6 +46,7 @@ export type Club = {
   isSaved?: boolean;
   membershipStatus?: RequestStatus | "notJoined";
 };
+
 export type EventItem = {
   id: string;
   clubId: string;
@@ -53,6 +60,7 @@ export type EventItem = {
   isSaved?: boolean;
   hasRsvped?: boolean;
 };
+
 export type Announcement = {
   id: string;
   clubId: string;
@@ -61,6 +69,7 @@ export type Announcement = {
   createdAt: string;
   priority: "normal" | "important";
 };
+
 export type Resource = {
   id: string;
   clubId: string;
@@ -70,6 +79,7 @@ export type Resource = {
   url: string;
   updatedAt: string;
 };
+
 export type JoinRequest = {
   id: string;
   clubId: string;
@@ -78,6 +88,7 @@ export type JoinRequest = {
   status: RequestStatus;
   createdAt: string;
 };
+
 export type NotificationItem = {
   id: string;
   title: string;
@@ -87,6 +98,7 @@ export type NotificationItem = {
   createdAt: string;
   relatedHref: string;
 };
+
 export type ClubInquiry = {
   id: string;
   clubId: string;
@@ -102,6 +114,7 @@ export type ClubInquiry = {
     createdAt: string;
   }[];
 };
+
 export type Report = {
   id: string;
   reporterName: string;
@@ -111,6 +124,7 @@ export type Report = {
   status: ReportStatus;
   createdAt: string;
 };
+
 export type Interest = {
   id: string;
   name: string;
