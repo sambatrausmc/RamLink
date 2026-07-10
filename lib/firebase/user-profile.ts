@@ -14,7 +14,7 @@ type CreateStudentProfileInput = {
   email: string;
 };
 
-export type UpdateStudentProfileInput = Pick
+export type UpdateStudentProfileInput = Pick<
   StudentProfile,
   "displayName" | "major" | "classYear" | "interests"
 >;
@@ -98,4 +98,4 @@ export async function updateStudentProfile(uid: string, input: UpdateStudentProf
     throw new Error("Student profile was not found after update.");
   }
   return updatedProfile;
-} 
+}
