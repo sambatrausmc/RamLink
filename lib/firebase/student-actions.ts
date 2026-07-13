@@ -13,7 +13,7 @@ import {
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { COLLECTIONS } from "@/lib/firebase/collections";
-import type { ClubInquiry, InquiryStatus, JoinRequest, RequestStatus } from "@/lib/types";
+import type { ClubInquiry, InquiryStatus, JoinRequest, NotificationItem, NotificationStatus, RequestStatus } from "@/lib/types";
 
 type JoinRequestInput = {
   userId: string;
@@ -41,6 +41,10 @@ function readInquiryStatus(value: unknown): InquiryStatus {
   return value === "resolved" ? value : "open";
 }
 
+function readNotificationStatus(value: unknown): NotificationStatus {
+  return value === "read" ? "read" : "unread";
+}
+
 function readString(value: unknown, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
@@ -58,26 +62,55 @@ function readCreatedAt(value: unknown) {
   return "Just now";
 }
 
+// Normalizers ensure consistent student data formatting
 function normalizeJoinRequest(snapshot: QueryDocumentSnapshot<DocumentData>): JoinRequest {
   const data = snapshot.data();
   return {
     id: snapshot.id,
     clubId: readString(data.clubId),
+    clubName: readString(data.clubName) || undefined,
     studentId: readString(data.studentId),
+    studentName: readString(data.studentName) || undefined,
     message: readString(data.message),
     status: readRequestStatus(data.status),
     createdAt: readCreatedAt(data.createdAt),
   };
 }
 
+function normalizeNotification(snapshot: QueryDocumentSnapshot<DocumentData>): NotificationItem {
+  const data = snapshot.data();
+  return {
+    id: snapshot.id,
+    userId: readString(data.userId) || undefined,
+    title: readString(data.title, "Notification"),
+    body: readString(data.body),
+    type:
+      data.type === "joinRequest" ||
+      data.type === "announcement" ||
+      data.type === "inquiry" ||
+      data.type === "resource"
+        ? data.type
+        : "event",
+    status: readNotificationStatus(data.status),
+    createdAt: readCreatedAt(data.createdAt),
+    relatedHref: readString(data.relatedHref, "/dashboard"),
+  };
+}
+
+// STUDENT READS: Query Firestore for items belonging specifically to the logged-in user ID
 export async function getStudentJoinRequests(userId: string) {
   const db = await getDb();
-  const snapshot = await getDocs(
-    query(collection(db, COLLECTIONS.joinRequests), where("studentId", "==", userId)),
-  );
+  const snapshot = await getDocs(query(collection(db, COLLECTIONS.joinRequests), where("studentId", "==", userId)));
   return snapshot.docs.map(normalizeJoinRequest);
 }
 
+export async function getStudentNotifications(userId: string) {
+  const db = await getDb();
+  const snapshot = await getDocs(query(collection(db, COLLECTIONS.notifications), where("userId", "==", userId)));
+  return snapshot.docs.map(normalizeNotification);
+}
+
+// STUDENT TOGGLES: Atomically add or remove IDs from the user's saved arrays in Firestore
 export async function toggleSavedClub(userId: string, clubId: string, currentlySaved: boolean) {
   const db = await getDb();
   await updateDoc(doc(db, COLLECTIONS.users, userId), {
@@ -105,6 +138,7 @@ export async function toggleEventRsvp(userId: string, eventId: string, currently
   return !currentlyRsvped;
 }
 
+// STUDENT CREATES: Sending a join request also fires an automatic inbox notification
 export async function createJoinRequest(input: JoinRequestInput): Promise<JoinRequest> {
   const db = await getDb();
   const request = {
@@ -115,6 +149,18 @@ export async function createJoinRequest(input: JoinRequestInput): Promise<JoinRe
     createdAt: serverTimestamp(),
   };
   const documentReference = await addDoc(collection(db, COLLECTIONS.joinRequests), request);
+  
+  // Automatically generate a notification for the student
+  await addDoc(collection(db, COLLECTIONS.notifications), {
+    userId: input.userId,
+    title: "Join request sent",
+    body: "Your membership request was sent to the club officers.",
+    type: "joinRequest",
+    status: "unread",
+    relatedHref: "/dashboard",
+    createdAt: serverTimestamp(),
+  });
+
   return {
     id: documentReference.id,
     clubId: request.clubId,
@@ -125,6 +171,7 @@ export async function createJoinRequest(input: JoinRequestInput): Promise<JoinRe
   } satisfies JoinRequest;
 }
 
+// STUDENT INQUIRY: Sending a question creates an inquiry thread and fires an inbox notification
 export async function createClubInquiry(input: ClubInquiryInput): Promise<ClubInquiry> {
   const db = await getDb();
   const inquiry = {
@@ -137,6 +184,17 @@ export async function createClubInquiry(input: ClubInquiryInput): Promise<ClubIn
     replies: [],
   };
   const documentReference = await addDoc(collection(db, COLLECTIONS.inquiries), inquiry);
+  
+  await addDoc(collection(db, COLLECTIONS.notifications), {
+    userId: input.userId,
+    title: "Question sent",
+    body: "Your question was sent to the official club inbox.",
+    type: "inquiry",
+    status: "unread",
+    relatedHref: "/notifications",
+    createdAt: serverTimestamp(),
+  });
+
   return {
     id: documentReference.id,
     clubId: inquiry.clubId,
