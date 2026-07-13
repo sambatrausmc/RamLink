@@ -1,3 +1,4 @@
+import { RoleGate } from "@/components/auth/role-gate";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 
 const clubNav = [
@@ -10,10 +11,11 @@ const clubNav = [
   { label: "Inbox", href: "/club/inbox" },
   { label: "Profile", href: "/club/profile" },
 ];
+
 export default function ClubLayout({ children }: { children: React.ReactNode }) {
   return (
     <WorkspaceShell roleLabel="Club Officer Mode" navItems={clubNav}>
-      {children}
+      <RoleGate allowedRoles={["clubOfficer", "admin"]}>{children}</RoleGate>
     </WorkspaceShell>
   );
 }
