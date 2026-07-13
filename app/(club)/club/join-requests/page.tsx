@@ -1,8 +1,12 @@
+export const dynamic = "force-dynamic";
 import { JoinRequestRow } from "@/components/cards/join-request-row";
 import { PageHeader } from "@/components/common/page-header";
 import { Badge } from "@/components/ui/badge";
-import { joinRequests } from "@/lib/mock-data";
-export default function JoinRequestsPage() {
+import { DEFAULT_MANAGED_CLUB_ID, getJoinRequestsForClub } from "@/lib/firebase/public-data";
+
+export default async function JoinRequestsPage() {
+  const joinRequests = await getJoinRequestsForClub(DEFAULT_MANAGED_CLUB_ID);
+  
   return (
     <div className="space-y-8">
       <PageHeader

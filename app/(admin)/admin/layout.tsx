@@ -1,3 +1,4 @@
+import { RoleGate } from "@/components/auth/role-gate";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 
 const adminNav = [
@@ -6,10 +7,11 @@ const adminNav = [
   { label: "Reports", href: "/admin/reports" },
   { label: "Users", href: "/admin/users" },
 ];
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <WorkspaceShell roleLabel="Admin Mode" navItems={adminNav}>
-      {children}
+      <RoleGate allowedRoles={["admin"]}>{children}</RoleGate>
     </WorkspaceShell>
   );
 }
