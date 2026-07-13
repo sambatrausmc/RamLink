@@ -1,12 +1,12 @@
 import { InquiryWorkflowCard } from "@/components/club/inquiry-workflow-card";
 import { PageHeader } from "@/components/common/page-header";
-import { inquiries } from "@/lib/mock-data";
+import { DEFAULT_MANAGED_CLUB_ID, getInquiriesForClub } from "@/lib/firebase/public-data";
 
-export default function ClubInboxPage() {
-  const clubInquiries = inquiries.filter(
-    (inquiry) => inquiry.clubId === "cs-club",
-  );
+export const dynamic = "force-dynamic";
 
+export default async function ClubInboxPage() {
+  const clubInquiries = await getInquiriesForClub(DEFAULT_MANAGED_CLUB_ID);
+  
   return (
     <div className="space-y-8">
       <PageHeader

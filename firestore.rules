@@ -1,27 +1,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Basic helper function to check if a user is authenticated[cite: 1]
+    // Basic helper function to check if a user is authenticated
     function isSignedIn() {
       return request.auth != null;
     }
     
-    // Checks if the user is interacting with their own user document[cite: 1]
+    // Checks if the user is interacting with their own user document
     function isSelf(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    // Confirms the user's profile exists in the database[cite: 1]
+    // Confirms the user's profile exists in the database
     function userDocExists() {
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
     
-    // Reads the authenticated user's Firestore profile data[cite: 1]
+    // Reads the authenticated user's Firestore profile data
     function userDoc() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
     
-    // Verifies the user holds a specific assigned role[cite: 1]
+    // Verifies the user holds a specific assigned role
     function hasRole(role) {
       return userDocExists() && userDoc().data.role == role;
     }
@@ -34,7 +34,7 @@ service cloud.firestore {
       return hasRole("clubOfficer");
     }
     
-    // Checks if an officer is explicitly assigned to manage the target clubId[cite: 1]
+    // Checks if an officer is explicitly assigned to manage the target clubId
     function managesClub(clubId) {
       return isAdmin() || (isOfficer() && "managedClubIds" in userDoc().data && clubId in userDoc().data.managedClubIds);
     }
@@ -67,7 +67,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Students can create their own profile as a student, but only Admins can elevate roles[cite: 1]
+    // Students can create their own profile as a student, but only Admins can elevate roles
     match /users/{userId} {
       allow create: if isSelf(userId) && request.resource.data.role == "student";
       allow read: if isSelf(userId) || isAdmin();
@@ -100,7 +100,7 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // Deny all other unmatched paths by default[cite: 1]
+    // Deny all other unmatched paths by default
     match /{document=**} {
       allow read, write: if false;
     }
