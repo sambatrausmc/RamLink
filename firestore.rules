@@ -1,90 +1,106 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Basic helper function to check if a user is authenticated[cite: 1]
     function isSignedIn() {
       return request.auth != null;
     }
-
+    
+    // Checks if the user is interacting with their own user document[cite: 1]
     function isSelf(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-
+    
+    // Confirms the user's profile exists in the database[cite: 1]
+    function userDocExists() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    // Reads the authenticated user's Firestore profile data[cite: 1]
     function userDoc() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
-
+    
+    // Verifies the user holds a specific assigned role[cite: 1]
     function hasRole(role) {
-      return isSignedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && userDoc().data.role == role;
+      return userDocExists() && userDoc().data.role == role;
     }
-
-    function isOfficerOrAdmin() {
-      return hasRole("clubOfficer") || hasRole("admin");
+    
+    function isAdmin() {
+      return hasRole("admin");
+    }
+    
+    function isOfficer() {
+      return hasRole("clubOfficer");
+    }
+    
+    // Checks if an officer is explicitly assigned to manage the target clubId[cite: 1]
+    function managesClub(clubId) {
+      return isAdmin() || (isOfficer() && "managedClubIds" in userDoc().data && clubId in userDoc().data.managedClubIds);
     }
 
     match /clubs/{clubId} {
       allow read: if true;
-      allow write: if hasRole("admin");
+      allow create, update, delete: if isAdmin() || managesClub(clubId);
     }
 
     match /events/{eventId} {
       allow read: if true;
-      allow write: if isOfficerOrAdmin();
+      allow create: if managesClub(request.resource.data.clubId);
+      allow update, delete: if managesClub(resource.data.clubId);
     }
 
     match /announcements/{announcementId} {
       allow read: if true;
-      allow write: if isOfficerOrAdmin();
+      allow create: if managesClub(request.resource.data.clubId);
+      allow update, delete: if managesClub(resource.data.clubId);
     }
 
     match /resources/{resourceId} {
       allow read: if true;
-      allow write: if isOfficerOrAdmin();
+      allow create: if managesClub(request.resource.data.clubId);
+      allow update, delete: if managesClub(resource.data.clubId);
     }
 
     match /interests/{interestId} {
       allow read: if true;
-      allow write: if hasRole("admin");
+      allow write: if isAdmin();
     }
 
+    // Students can create their own profile as a student, but only Admins can elevate roles[cite: 1]
     match /users/{userId} {
-      allow create: if isSelf(userId);
-      allow read, update: if isSelf(userId) || hasRole("admin");
-      allow delete: if hasRole("admin");
+      allow create: if isSelf(userId) && request.resource.data.role == "student";
+      allow read: if isSelf(userId) || isAdmin();
+      allow update: if (isSelf(userId) && request.resource.data.role == resource.data.role) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /joinRequests/{requestId} {
-      allow create: if isSignedIn()
-        && request.resource.data.studentId == request.auth.uid;
-      allow read: if isSignedIn()
-        && (resource.data.studentId == request.auth.uid || isOfficerOrAdmin());
-      allow update: if isOfficerOrAdmin();
-      allow delete: if hasRole("admin");
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow read: if isSignedIn() && (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
+      allow update: if managesClub(resource.data.clubId);
+      allow delete: if isAdmin();
     }
 
     match /inquiries/{inquiryId} {
-      allow create: if isSignedIn()
-        && request.resource.data.studentId == request.auth.uid;
-      allow read: if isSignedIn()
-        && (resource.data.studentId == request.auth.uid || isOfficerOrAdmin());
-      allow update: if isOfficerOrAdmin();
-      allow delete: if hasRole("admin");
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow read: if isSignedIn() && (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
+      allow update: if managesClub(resource.data.clubId);
+      allow delete: if isAdmin();
     }
 
     match /notifications/{notificationId} {
-      allow read, update: if isSignedIn()
-        && resource.data.userId == request.auth.uid;
-      allow create: if isOfficerOrAdmin();
-      allow delete: if hasRole("admin");
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read, update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin();
     }
 
     match /reports/{reportId} {
       allow create: if isSignedIn();
-      allow read, update, delete: if hasRole("admin");
+      allow read, update, delete: if isAdmin();
     }
 
+    // Deny all other unmatched paths by default[cite: 1]
     match /{document=**} {
       allow read, write: if false;
     }
