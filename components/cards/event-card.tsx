@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -10,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/common/status-badge";
 import { useAuth } from "@/components/auth/auth-provider";
 import { toggleEventRsvp, toggleSavedEvent } from "@/lib/firebase/student-actions";
-import { getClubById } from "@/lib/mock-data";
 import type { EventItem } from "@/lib/types";
 
 type EventCardProps = {
@@ -21,6 +19,7 @@ type EventCardProps = {
 
 export function EventCard({ event, compact = false, actionMode = "workspace" }: EventCardProps) {
   const { profile, refreshProfile, user } = useAuth();
+  
   const [savedOverride, setSavedOverride] = useState<boolean | null>(null);
   const [rsvpOverride, setRsvpOverride] = useState<boolean | null>(null);
   const [rsvpCountAdjustment, setRsvpCountAdjustment] = useState(0);
@@ -28,11 +27,10 @@ export function EventCard({ event, compact = false, actionMode = "workspace" }: 
   const [isSaving, setIsSaving] = useState(false);
   const [isRsvping, setIsRsvping] = useState(false);
 
-  const club = getClubById(event.clubId);
   const date = format(new Date(`${event.date}T12:00:00`), "MMM d, yyyy");
-
   const profileSaved = profile?.savedEventIds.includes(event.id) ?? event.isSaved ?? false;
   const profileRsvped = profile?.rsvpedEventIds?.includes(event.id) ?? event.hasRsvped ?? false;
+  
   const isSaved = savedOverride ?? profileSaved;
   const hasRsvped = rsvpOverride ?? profileRsvped;
   const rsvpCount = Math.max(0, event.rsvpCount + rsvpCountAdjustment);
@@ -81,8 +79,10 @@ export function EventCard({ event, compact = false, actionMode = "workspace" }: 
       <CardContent className={compact ? "p-4" : undefined}>
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <Badge tone="blue">{club?.name ?? "Campus event"}</Badge>
-            <h2 className="mt-3 font-display text-xl font-semibold tracking-[-0.02em] text-brand-ink">{event.title}</h2>
+            <Badge tone="blue">{event.clubName ?? "Campus event"}</Badge>
+            <h2 className="mt-3 font-display text-xl font-semibold tracking-[-0.02em] text-brand-ink">
+              {event.title}
+            </h2>
             <p className="mt-2 text-sm leading-6 text-brand-muted">{event.description}</p>
           </div>
           <div className="flex gap-2">
@@ -90,7 +90,6 @@ export function EventCard({ event, compact = false, actionMode = "workspace" }: 
             {isSaved ? <StatusBadge status="saved" /> : null}
           </div>
         </div>
-
         <div className="mt-4 grid gap-2 text-sm text-brand-muted md:grid-cols-3">
           <p className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4 text-brand-green" />
@@ -105,7 +104,6 @@ export function EventCard({ event, compact = false, actionMode = "workspace" }: 
             {event.location}
           </p>
         </div>
-
         {!compact ? (
           <div className="mt-5 flex flex-wrap items-center gap-3">
             {actionMode === "public" ? (
