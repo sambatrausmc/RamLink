@@ -1,5 +1,7 @@
+// Define the three strict access levels in RamLink
 export type UserRole = "student" | "clubOfficer" | "admin";
 
+// Define all official categories a club can belong to
 export type ClubCategory =
   | "Academic"
   | "Business"
@@ -10,12 +12,14 @@ export type ClubCategory =
   | "Recreation"
   | "Technology";
 
+// Status trackers for various student and officer actions
 export type RequestStatus = "pending" | "approved" | "rejected";
 export type NotificationStatus = "read" | "unread";
 export type InquiryStatus = "open" | "resolved";
 export type ReportStatus = "new" | "reviewing" | "dismissed" | "removed";
 export type ResourceType = "Form" | "Waiver" | "Guide" | "Link" | "Document";
 
+// The complete profile structure for a signed-in student
 export type StudentProfile = {
   id: string;
   role?: UserRole;
@@ -28,8 +32,10 @@ export type StudentProfile = {
   savedClubIds: string[];
   savedEventIds: string[];
   rsvpedEventIds?: string[];
+  managedClubIds?: string[];
 };
 
+// The structure for an official student organization
 export type Club = {
   id: string;
   name: string;
@@ -47,9 +53,11 @@ export type Club = {
   membershipStatus?: RequestStatus | "notJoined";
 };
 
+// Campus activities hosted by clubs
 export type EventItem = {
   id: string;
   clubId: string;
+  clubName?: string;
   title: string;
   description: string;
   date: string;
@@ -61,15 +69,18 @@ export type EventItem = {
   hasRsvped?: boolean;
 };
 
+// Official broadcasts sent out by club officers
 export type Announcement = {
   id: string;
   clubId: string;
+  clubName?: string;
   title: string;
   body: string;
   createdAt: string;
   priority: "normal" | "important";
 };
 
+// Downloadable links or documents provided by clubs
 export type Resource = {
   id: string;
   clubId: string;
@@ -80,17 +91,22 @@ export type Resource = {
   updatedAt: string;
 };
 
+// Student applications to join a club
 export type JoinRequest = {
   id: string;
   clubId: string;
+  clubName?: string;
   studentId: string;
+  studentName?: string;
   message: string;
   status: RequestStatus;
   createdAt: string;
 };
 
+// System alerts sent to a student's inbox
 export type NotificationItem = {
   id: string;
+  userId?: string;
   title: string;
   body: string;
   type: "event" | "joinRequest" | "announcement" | "inquiry" | "resource";
@@ -99,10 +115,13 @@ export type NotificationItem = {
   relatedHref: string;
 };
 
+// Official Q&A threads between a student and club officers
 export type ClubInquiry = {
   id: string;
   clubId: string;
+  clubName?: string;
   studentId: string;
+  studentName?: string;
   subject: string;
   message: string;
   status: InquiryStatus;
@@ -115,6 +134,7 @@ export type ClubInquiry = {
   }[];
 };
 
+// Content moderation flags submitted to administrators
 export type Report = {
   id: string;
   reporterName: string;
@@ -125,6 +145,7 @@ export type Report = {
   createdAt: string;
 };
 
+// Categories used for student discovery recommendations
 export type Interest = {
   id: string;
   name: string;
