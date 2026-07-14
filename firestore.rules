@@ -1,47 +1,64 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Basic helper function to check if a user is authenticated
+    // Helper function to confirm user is authenticated
     function isSignedIn() {
       return request.auth != null;
     }
-    
-    // Checks if the user is interacting with their own user document
+
+    // Helper to confirm user is accessing their own document ID
     function isSelf(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    
-    // Confirms the user's profile exists in the database
+
+    // Checks if user profile exists in Firestore
     function userDocExists() {
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
-    
-    // Reads the authenticated user's Firestore profile data
+
+    // Retrieves active user profile document
     function userDoc() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
-    
-    // Verifies the user holds a specific assigned role
+
+    // Verifies specific assigned role
     function hasRole(role) {
       return userDocExists() && userDoc().data.role == role;
     }
-    
+
     function isAdmin() {
       return hasRole("admin");
     }
-    
+
     function isOfficer() {
       return hasRole("clubOfficer");
     }
-    
-    // Checks if an officer is explicitly assigned to manage the target clubId
+
+    // Confirms an officer manages the target clubId
     function managesClub(clubId) {
-      return isAdmin() || (isOfficer() && "managedClubIds" in userDoc().data && clubId in userDoc().data.managedClubIds);
+      return isAdmin() ||
+        (isOfficer() &&
+        "managedClubIds" in userDoc().data &&
+        clubId in userDoc().data.managedClubIds);
+    }
+
+    // Restricts officer updates on student profiles to modifying only memberships of clubs they manage
+    function officerUpdatesManagedMembership() {
+      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+      let oldClubs = resource.data.joinedClubIds.toSet();
+      let newClubs = request.resource.data.joinedClubIds.toSet();
+      let addedClubs = newClubs.difference(oldClubs);
+      let removedClubs = oldClubs.difference(newClubs);
+
+      return isOfficer() &&
+        changedFields.hasOnly(["joinedClubIds", "updatedAt"]) &&
+        addedClubs.hasOnly(userDoc().data.managedClubIds) &&
+        removedClubs.hasOnly(userDoc().data.managedClubIds);
     }
 
     match /clubs/{clubId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin() || managesClub(clubId);
+      allow create, update, delete: if managesClub(clubId);
     }
 
     match /events/{eventId} {
@@ -67,31 +84,43 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Students can create their own profile as a student, but only Admins can elevate roles
     match /users/{userId} {
       allow create: if isSelf(userId) && request.resource.data.role == "student";
-      allow read: if isSelf(userId) || isAdmin();
-      allow update: if (isSelf(userId) && request.resource.data.role == resource.data.role) || isAdmin();
+      allow read: if isSelf(userId) || isAdmin() || isOfficer();
+      allow update: if
+        (isSelf(userId) && request.resource.data.role == resource.data.role) ||
+        isAdmin() ||
+        officerUpdatesManagedMembership();
       allow delete: if isAdmin();
     }
 
     match /joinRequests/{requestId} {
       allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
-      allow read: if isSignedIn() && (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
+      allow read: if isSignedIn() &&
+        (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
       allow update: if managesClub(resource.data.clubId);
       allow delete: if isAdmin();
     }
 
     match /inquiries/{inquiryId} {
       allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
-      allow read: if isSignedIn() && (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
+      allow read: if isSignedIn() &&
+        (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
       allow update: if managesClub(resource.data.clubId);
       allow delete: if isAdmin();
     }
 
     match /notifications/{notificationId} {
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow read, update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Allows self-notifications, admin alerts, or officer alerts sent from managed clubs
+      allow create: if isSignedIn() &&
+        (request.resource.data.userId == request.auth.uid ||
+        isAdmin() ||
+        ("clubId" in request.resource.data && managesClub(request.resource.data.clubId)));
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Users can only mark their own notifications read/unread
+      allow update: if isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"]);
       allow delete: if isAdmin();
     }
 
@@ -100,7 +129,6 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // Deny all other unmatched paths by default
     match /{document=**} {
       allow read, write: if false;
     }
