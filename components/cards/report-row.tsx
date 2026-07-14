@@ -1,13 +1,31 @@
+"use client";
+import { useState } from "react";
 import { ShieldAlert } from "lucide-react";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import type { Report } from "@/lib/types";
+import { updateReportStatus } from "@/lib/firebase/admin-workflows";
+import type { Report, ReportStatus } from "@/lib/types";
 
-type ReportRowProps = {
-  report: Report;
-};
-export function ReportRow({ report }: ReportRowProps) {
+export function ReportRow({ report }: { report: Report }) {
+  const [status, setStatus] = useState<ReportStatus>(report.status);
+  const [saving, setSaving] = useState<ReportStatus | null>(null);
+  const [feedback, setFeedback] = useState("");
+
+  async function changeStatus(nextStatus: ReportStatus) {
+    setSaving(nextStatus);
+    setFeedback("");
+    try {
+      await updateReportStatus(report.id, nextStatus);
+      setStatus(nextStatus);
+      setFeedback("Report status updated.");
+    } catch {
+      setFeedback("Unable to update this report.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
   return (
     <Card className="transition duration-200 hover:-translate-y-1 hover:shadow-lift">
       <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -17,22 +35,43 @@ export function ReportRow({ report }: ReportRowProps) {
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-display font-semibold text-brand-ink">{report.contentTitle}</h2>
-              <StatusBadge status={report.status} />
+              <h2 className="font-display font-semibold text-brand-ink">
+                {report.contentTitle}
+              </h2>
+              <StatusBadge status={status} />
             </div>
             <p className="mt-1 text-sm text-brand-muted">
               {report.contentType} reported by {report.reporterName}
             </p>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-brand-muted">{report.reason}</p>
-            <p className="mt-2 text-xs font-medium text-brand-muted/70">Reported {report.createdAt}</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-brand-muted">
+              {report.reason}
+            </p>
+            <p className="mt-2 text-xs text-brand-muted/70">
+              Reported {report.createdAt}
+            </p>
+            {feedback ? (
+              <p className="mt-2 text-sm font-medium text-brand-forest">
+                {feedback}
+              </p>
+            ) : null}
           </div>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline">
-            Dismiss
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={saving !== null}
+            onClick={() => changeStatus("dismissed")}
+          >
+            {saving === "dismissed" ? "Saving..." : "Dismiss"}
           </Button>
-          <Button size="sm" variant="danger">
-            Remove
+          <Button
+            size="sm"
+            variant="danger"
+            disabled={saving !== null}
+            onClick={() => changeStatus("removed")}
+          >
+            {saving === "removed" ? "Saving..." : "Remove"}
           </Button>
         </div>
       </CardContent>
