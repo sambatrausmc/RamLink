@@ -30,3 +30,13 @@ const filteredClubs = useMemo(
 );
 return (
 <div className="space-y-8">
+<section className="rounded-[22px] border border-brand-mist bg-white p-5 shadow-soft">
+<div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+<label className="relative block">
+<Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-green" />
+<Input
+className="pl-10"
+placeholder="Search clubs by name, category, or interest..."
+value={query}
+onChange={(event) => setQuery(event.target.value)}
+/>
