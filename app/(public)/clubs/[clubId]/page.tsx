@@ -42,34 +42,48 @@ return (
         description={club.description}
         actions={
           <>
-<Link
-href="/register"
-className={`
-inline-flex items-center justify-center gap-2 rounded-[11px]
-bg-brand-forest px-5 py-3.5 text-[15px] font-semibold leading-none
-text-white shadow-[0_6px_16px_rgba(11,93,59,0.22)] transition
-hover:-translate-y-0.5 hover:bg-brand-forestDark
-`}
-
->
-Create Account
-<ArrowRight className="h-4 w-4" />
-</Link>
-<Link
-href="/events"
-className={`
-inline-flex items-center justify-center rounded-[11px] border
-border-brand-mist bg-white px-5 py-3.5 text-[15px] font-semibold
-leading-none text-brand-forest transition hover:-translate-y-0.5
-hover:border-brand-greenLight hover:bg-brand-surface
-`}
->
-View Events
-</Link>
-</>
+  <Link
+    href="/login"
+    className={`
+      inline-flex items-center justify-center gap-2 rounded-[11px]
+      bg-brand-forest px-5 py-3.5 text-[15px] font-semibold leading-none
+      text-white shadow-[0_6px_16px_rgba(11,93,59,0.22)] transition
+      hover:-translate-y-0.5 hover:bg-brand-forestDark
+    `}
+  >
+    Sign in to join
+    <ArrowRight className="h-4 w-4" />
+  </Link>
+  <Link
+    href="/register"
+    className={`
+      inline-flex items-center justify-center rounded-[11px] border
+      border-brand-mist bg-white px-5 py-3.5 text-[15px] font-semibold
+      leading-none text-brand-forest transition hover:-translate-y-0.5
+      hover:border-brand-greenLight hover:bg-brand-surface
+    `}
+  >
+    Create Account
+  </Link>
+  </>
 }
+aside={
+  <div className="rounded-[22px] border border-brand-mist bg-white p-5 shadow-lift">
+    <div
+      className={`
+        grid h-16 w-16 place-items-center rounded-[18px]
+        bg-brand-mist font-display text-xl font-semibold
+        text-brand-forest
+      `}
+    >
+      {club.shortName}
+    </div>
 
-
+    <div className="mt-4 space-y-2 text-sm text-brand-muted">
+      <p className="flex items-center gap-2">
+        <CalendarDays className="h-4 w-4 text-brand-green" />
+        {club.meetingSchedule}
+      </p>
 
 
 export default async function ClubProfilePage({ params }: ClubProfilePageProps) {
