@@ -17,10 +17,25 @@ export async function updateUserRole(userId: string, role: UserRole) {
 }
 
 // ADMIN ACTION: Update the status of a content moderation report
-export async function updateReportStatus(reportId: string, status: ReportStatus) {
+export async function updateReportStatus(
+  reportId: string,
+  status: ReportStatus,
+) {
   const db = await getDb();
   await updateDoc(doc(db, COLLECTIONS.reports, reportId), {
     status,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// ADMIN ACTION: Assigns managed club IDs to a club officer account
+export async function updateManagedClubs(
+  userId: string,
+  managedClubIds: string[],
+) {
+  const db = await getDb();
+  await updateDoc(doc(db, COLLECTIONS.users, userId), {
+    managedClubIds,
     updatedAt: serverTimestamp(),
   });
 }
