@@ -7,16 +7,13 @@ export const dynamic = "force-dynamic";
 export default async function ClubsPage() {
 const [clubs, interests] = await Promise.all([getClubs(), getInterests()]);
 return (
-        // Main page wrapper with the shared brand surface background
-        <div className="bg-brand-surface/70">
-            {/* Content container: Centers the layout, sets the maximum width to 1180px, 
-              and applies responsive padding for mobile (px-5) and desktop (md:px-6) 
-            */}
-            <div className="mx-auto w-full max-w-[1180px] space-y-10 px-5 py-12 md:px-6 md:py-16">
-                
-                {/* Hero Section: Introduces the club directory to the user.
-                  Utilizes the shared PageHero component to maintain consistent 
-                  headers across the public pages.
+       <div className="bg-brand-surface/70">
+       <div className="bg-brand-surface/70">
+       <div className="mx-auto w-full max-w-[1180px] space-y-10 px-5 py-12 md:px-6 md:py-16">
+       <PageHero
+       eyebrow="Club Directory"
+       title={
+       <>
                 */}
                 <PageHero
                     eyebrow="Club Directory"
