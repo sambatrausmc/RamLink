@@ -39,10 +39,18 @@ return (
                leading-none text-brand-forest transition hover:-translate-y-0.5
                hover:border-brand-greenLight hover:bg-brand-surface
                `}
+                >
+                View Events
+                </Link>
+                </>
+                }
+                aside={
+                <div className="rounded-[22px] border border-brand-mist bg-white p-5 shadow-lift">
+                <div className="flex items-center gap-3">
+                <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-brand-mist text-brand-forest">
+                <Users className="h-6 w-6" />
+                </div>
 
-                    description="Browse student organizations, compare meeting times, and find the campus groups that fit you."
-                    actions={
-                        <>
                             {/* Primary call to action for unregistered students */}
                             <Link
                                 href="/register"
