@@ -1,16 +1,12 @@
-// Routing and UI Icons
 import Link from "next/link";
-import { ArrowRight, Search, Users } from "lucide-react";
-
-// RamLink shared components and mock data for the discovery interface
-import { ClubCard } from "@/components/cards/club-card";
+import { ArrowRight, Users } from "lucide-react";
+import { ClubDirectoryClient } from "@/components/public/club-directory-client";
 import { PageHero } from "@/components/common/page-hero";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { clubs, interests } from "@/lib/mock-data";
-
-export default function ClubsPage() {
-    return (
+import { getClubs, getInterests } from "@/lib/firebase/public-data";
+export const dynamic = "force-dynamic";
+export default async function ClubsPage() {
+const [clubs, interests] = await Promise.all([getClubs(), getInterests()]);
+return (
         // Main page wrapper with the shared brand surface background
         <div className="bg-brand-surface/70">
             {/* Content container: Centers the layout, sets the maximum width to 1180px, 
