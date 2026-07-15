@@ -156,20 +156,30 @@ aside={
                        </section>
 
                         {/* forms and resources list */}
-                        <section className="space-y-4">
-                            <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-brand-ink">Forms and resources</h2>
-                            {/* same empty state logic here for resources */}
-                            {clubResources.length ? (
-                                clubResources.map((resource) => <ResourceCard key={resource.id} resource={resource} />)
-                            ) : (
-                                <Card>
-                                    <CardContent>
-                                        <p className="text-sm text-brand-muted">No resources are listed yet.</p>
-                                    </CardContent>
-                                </Card>
-                            )}
-                        </section>
-                    </div>
+                       <section className="space-y-4">
+                         <h2 className="font-display text-2xl font-semibold text-brand-ink">
+                           Forms and resources
+                         </h2>
+
+                         {clubResources.length ? (
+                           clubResources.map((resource) => (
+                                 <ResourceCard
+                                   key={resource.id}
+                                   resource={resource}
+                                 />
+                               ))
+                             ) : (
+                               <Card>
+                                 <CardContent>
+                                   <p className="text-sm text-brand-muted">
+                                     No resources are listed yet.
+                                   </p>
+                                 </CardContent>
+                               </Card>
+                             )}
+                           </section>
+                           </div>
+
 
                     {/* RIGHT COLUMN */}
                     <aside className="space-y-6">
