@@ -84,7 +84,18 @@ aside={
         <CalendarDays className="h-4 w-4 text-brand-green" />
         {club.meetingSchedule}
       </p>
-
+       <p className="flex items-center gap-2">
+         <MapPin className="h-4 w-4 text-brand-green" />
+         {club.meetingLocation}
+       </p>
+       <p className="flex items-center gap-2">
+         <Users className="h-4 w-4 text-brand-green" />
+         {club.memberCount} members
+       </p>
+      </div>
+     </div>
+    }
+/>
 
 export default async function ClubProfilePage({ params }: ClubProfilePageProps) {
     // grab the specific club ID from the URL
