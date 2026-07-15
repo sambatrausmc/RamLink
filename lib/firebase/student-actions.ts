@@ -13,17 +13,29 @@ import {
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { COLLECTIONS } from "@/lib/firebase/collections";
-import type { ClubInquiry, InquiryStatus, JoinRequest, NotificationItem, NotificationStatus, RequestStatus } from "@/lib/types";
+import type {
+  ClubInquiry,
+  InquiryStatus,
+  JoinRequest,
+  NotificationItem,
+  NotificationStatus,
+  RequestStatus,
+} from "@/lib/types";
 
+// Extended input shapes to capture optional club and student names
 type JoinRequestInput = {
   userId: string;
   clubId: string;
+  clubName?: string;
+  studentName?: string;
   message: string;
 };
 
 type ClubInquiryInput = {
   userId: string;
   clubId: string;
+  clubName?: string;
+  studentName?: string;
   subject: string;
   message: string;
 };
@@ -62,8 +74,10 @@ function readCreatedAt(value: unknown) {
   return "Just now";
 }
 
-// Normalizers ensure consistent student data formatting
-function normalizeJoinRequest(snapshot: QueryDocumentSnapshot<DocumentData>): JoinRequest {
+// Normalizers ensure consistent student data formatting when reading from Firestore
+function normalizeJoinRequest(
+  snapshot: QueryDocumentSnapshot<DocumentData>,
+): JoinRequest {
   const data = snapshot.data();
   return {
     id: snapshot.id,
@@ -77,7 +91,9 @@ function normalizeJoinRequest(snapshot: QueryDocumentSnapshot<DocumentData>): Jo
   };
 }
 
-function normalizeNotification(snapshot: QueryDocumentSnapshot<DocumentData>): NotificationItem {
+function normalizeNotification(
+  snapshot: QueryDocumentSnapshot<DocumentData>,
+): NotificationItem {
   const data = snapshot.data();
   return {
     id: snapshot.id,
@@ -97,21 +113,36 @@ function normalizeNotification(snapshot: QueryDocumentSnapshot<DocumentData>): N
   };
 }
 
-// STUDENT READS: Query Firestore for items belonging specifically to the logged-in user ID
+// Queries all join requests submitted by the active user
 export async function getStudentJoinRequests(userId: string) {
   const db = await getDb();
-  const snapshot = await getDocs(query(collection(db, COLLECTIONS.joinRequests), where("studentId", "==", userId)));
+  const snapshot = await getDocs(
+    query(
+      collection(db, COLLECTIONS.joinRequests),
+      where("studentId", "==", userId),
+    ),
+  );
   return snapshot.docs.map(normalizeJoinRequest);
 }
 
+// Queries all inbox notifications assigned to the active user
 export async function getStudentNotifications(userId: string) {
   const db = await getDb();
-  const snapshot = await getDocs(query(collection(db, COLLECTIONS.notifications), where("userId", "==", userId)));
+  const snapshot = await getDocs(
+    query(
+      collection(db, COLLECTIONS.notifications),
+      where("userId", "==", userId),
+    ),
+  );
   return snapshot.docs.map(normalizeNotification);
 }
 
-// STUDENT TOGGLES: Atomically add or remove IDs from the user's saved arrays in Firestore
-export async function toggleSavedClub(userId: string, clubId: string, currentlySaved: boolean) {
+// Toggles club bookmark IDs inside the student's user document
+export async function toggleSavedClub(
+  userId: string,
+  clubId: string,
+  currentlySaved: boolean,
+) {
   const db = await getDb();
   await updateDoc(doc(db, COLLECTIONS.users, userId), {
     savedClubIds: currentlySaved ? arrayRemove(clubId) : arrayUnion(clubId),
@@ -120,7 +151,12 @@ export async function toggleSavedClub(userId: string, clubId: string, currentlyS
   return !currentlySaved;
 }
 
-export async function toggleSavedEvent(userId: string, eventId: string, currentlySaved: boolean) {
+// Toggles event bookmark IDs inside the student's user document
+export async function toggleSavedEvent(
+  userId: string,
+  eventId: string,
+  currentlySaved: boolean,
+) {
   const db = await getDb();
   await updateDoc(doc(db, COLLECTIONS.users, userId), {
     savedEventIds: currentlySaved ? arrayRemove(eventId) : arrayUnion(eventId),
@@ -129,30 +165,45 @@ export async function toggleSavedEvent(userId: string, eventId: string, currentl
   return !currentlySaved;
 }
 
-export async function toggleEventRsvp(userId: string, eventId: string, currentlyRsvped: boolean) {
+// Toggles event RSVP IDs inside the student's user document
+export async function toggleEventRsvp(
+  userId: string,
+  eventId: string,
+  currentlyRsvped: boolean,
+) {
   const db = await getDb();
   await updateDoc(doc(db, COLLECTIONS.users, userId), {
-    rsvpedEventIds: currentlyRsvped ? arrayRemove(eventId) : arrayUnion(eventId),
+    rsvpedEventIds: currentlyRsvped
+      ? arrayRemove(eventId)
+      : arrayUnion(eventId),
     updatedAt: serverTimestamp(),
   });
   return !currentlyRsvped;
 }
 
-// STUDENT CREATES: Sending a join request also fires an automatic inbox notification
-export async function createJoinRequest(input: JoinRequestInput): Promise<JoinRequest> {
+// Creates a join request in Firestore and triggers an immediate feedback notification
+export async function createJoinRequest(
+  input: JoinRequestInput,
+): Promise<JoinRequest> {
   const db = await getDb();
   const request = {
     clubId: input.clubId,
+    clubName: input.clubName ?? "",
     studentId: input.userId,
+    studentName: input.studentName ?? "Student",
     message: input.message,
     status: "pending" as RequestStatus,
     createdAt: serverTimestamp(),
   };
-  const documentReference = await addDoc(collection(db, COLLECTIONS.joinRequests), request);
-  
-  // Automatically generate a notification for the student
+  const documentReference = await addDoc(
+    collection(db, COLLECTIONS.joinRequests),
+    request,
+  );
+
+  // Automatically generate a notification alerting the student that their request is pending
   await addDoc(collection(db, COLLECTIONS.notifications), {
     userId: input.userId,
+    clubId: input.clubId,
     title: "Join request sent",
     body: "Your membership request was sent to the club officers.",
     type: "joinRequest",
@@ -171,22 +222,30 @@ export async function createJoinRequest(input: JoinRequestInput): Promise<JoinRe
   } satisfies JoinRequest;
 }
 
-// STUDENT INQUIRY: Sending a question creates an inquiry thread and fires an inbox notification
-export async function createClubInquiry(input: ClubInquiryInput): Promise<ClubInquiry> {
+// Creates a student inquiry thread and triggers an immediate feedback notification
+export async function createClubInquiry(
+  input: ClubInquiryInput,
+): Promise<ClubInquiry> {
   const db = await getDb();
   const inquiry = {
     clubId: input.clubId,
+    clubName: input.clubName ?? "",
     studentId: input.userId,
+    studentName: input.studentName ?? "Student",
     subject: input.subject,
     message: input.message,
     status: "open" as InquiryStatus,
     createdAt: serverTimestamp(),
     replies: [],
   };
-  const documentReference = await addDoc(collection(db, COLLECTIONS.inquiries), inquiry);
-  
+  const documentReference = await addDoc(
+    collection(db, COLLECTIONS.inquiries),
+    inquiry,
+  );
+
   await addDoc(collection(db, COLLECTIONS.notifications), {
     userId: input.userId,
+    clubId: input.clubId,
     title: "Question sent",
     body: "Your question was sent to the official club inbox.",
     type: "inquiry",

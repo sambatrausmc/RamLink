@@ -1,8 +1,29 @@
-import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import {
+  addDoc,
+  arrayRemove,
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  increment,
+  query,
+  runTransaction,
+  serverTimestamp,
+  updateDoc,
+  where,
+  writeBatch,
+} from "firebase/firestore";
 import { COLLECTIONS } from "@/lib/firebase/collections";
-import type { Club, ClubInquiry, InquiryStatus, RequestStatus, ResourceType } from "@/lib/types";
+import type {
+  Club,
+  ClubInquiry,
+  InquiryStatus,
+  RequestStatus,
+  ResourceType,
+} from "@/lib/types";
 
-// Input types for creating new club content
+// Input type definitions for creating new club content
 export type CreateClubEventInput = {
   clubId: string;
   clubName: string;
@@ -30,34 +51,48 @@ export type CreateResourceInput = {
   url: string;
 };
 
-// Allows updating only specific club profile fields
+// Restricts club updates to specific editable profile fields
 export type UpdateClubProfileInput = Pick<
   Club,
-  "name" | "shortName" | "category" | "description" | "meetingSchedule" | "meetingLocation" | "contactEmail" | "tags"
+  | "name"
+  | "shortName"
+  | "category"
+  | "description"
+  | "meetingSchedule"
+  | "meetingLocation"
+  | "contactEmail"
+  | "tags"
 >;
 
+// Dynamically loads the Firebase client database instance
 async function getDb() {
   const { db } = await import("@/lib/firebase/client");
   return db;
 }
 
+// Generates a clean date string for fallback timestamps
 function todayLabel() {
   return new Date().toLocaleDateString();
 }
 
-// Safely validates resource strings
+// Validates resource type strings, defaulting to "Link" if unrecognized
 export function parseResourceType(value: string): ResourceType {
-  if (value === "Form" || value === "Waiver" || value === "Guide" || value === "Document") {
+  if (
+    value === "Form" ||
+    value === "Waiver" ||
+    value === "Guide" ||
+    value === "Document"
+  ) {
     return value;
   }
   return "Link";
 }
 
-// Formats a new officer reply with a sequential ID and timestamp
+// Formats a standardized reply object for club inquiry threads
 export function buildOfficerReply(
   existingReplies: ClubInquiry["replies"],
   body: string,
-  senderName = "Club Officer"
+  senderName = "Club Officer",
 ) {
   return {
     id: `reply-${existingReplies.length + 1}`,
@@ -67,7 +102,7 @@ export function buildOfficerReply(
   };
 }
 
-// WORKFLOW WRITES: These functions push new documents to Firestore with server timestamps
+// Creates a new campus event and sets initial RSVP counters
 export async function createClubEvent(input: CreateClubEventInput) {
   const db = await getDb();
   await addDoc(collection(db, COLLECTIONS.events), {
@@ -78,6 +113,7 @@ export async function createClubEvent(input: CreateClubEventInput) {
   });
 }
 
+// Posts a new announcement and automatically notifies all existing club members
 export async function createClubAnnouncement(input: CreateAnnouncementInput) {
   const db = await getDb();
   await addDoc(collection(db, COLLECTIONS.announcements), {
@@ -85,8 +121,33 @@ export async function createClubAnnouncement(input: CreateAnnouncementInput) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+
+  // Query all users whose joinedClubIds array contains this club
+  const members = await getDocs(
+    query(
+      collection(db, COLLECTIONS.users),
+      where("joinedClubIds", "array-contains", input.clubId),
+    ),
+  );
+
+  // Batch create an unread notification for every member
+  const batch = writeBatch(db);
+  members.forEach((member) => {
+    batch.set(doc(collection(db, COLLECTIONS.notifications)), {
+      userId: member.id,
+      clubId: input.clubId,
+      title: input.title,
+      body: `${input.clubName} posted a new announcement.`,
+      type: "announcement",
+      status: "unread",
+      relatedHref: `/clubs/${input.clubId}`,
+      createdAt: serverTimestamp(),
+    });
+  });
+  await batch.commit();
 }
 
+// Uploads a new club resource link or document reference
 export async function createClubResource(input: CreateResourceInput) {
   const db = await getDb();
   await addDoc(collection(db, COLLECTIONS.resources), {
@@ -95,7 +156,11 @@ export async function createClubResource(input: CreateResourceInput) {
   });
 }
 
-export async function updateClubProfile(clubId: string, input: UpdateClubProfileInput) {
+// Updates basic club profile information
+export async function updateClubProfile(
+  clubId: string,
+  input: UpdateClubProfileInput,
+) {
   const db = await getDb();
   await updateDoc(doc(db, COLLECTIONS.clubs, clubId), {
     ...input,
@@ -103,35 +168,112 @@ export async function updateClubProfile(clubId: string, input: UpdateClubProfile
   });
 }
 
-// Officers can approve or reject student join requests
-export async function updateJoinRequestStatus(requestId: string, status: RequestStatus) {
+// ATOMIC MEMBERSHIP TRANSACTION: Updates request status, user profile, club member count, and notifications simultaneously
+export async function updateJoinRequestStatus(
+  requestId: string,
+  status: RequestStatus,
+) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.joinRequests, requestId), {
-    status,
-    updatedAt: serverTimestamp(),
+  const requestRef = doc(db, COLLECTIONS.joinRequests, requestId);
+  const notificationRef = doc(collection(db, COLLECTIONS.notifications));
+
+  await runTransaction(db, async (transaction) => {
+    const requestSnapshot = await transaction.get(requestRef);
+    if (!requestSnapshot.exists()) {
+      throw new Error("Join request not found.");
+    }
+
+    const request = requestSnapshot.data();
+    const studentId = String(request.studentId ?? "");
+    const clubId = String(request.clubId ?? "");
+    const previousStatus = request.status as RequestStatus;
+
+    if (!studentId || !clubId) {
+      throw new Error("Join request is missing membership information.");
+    }
+
+    transaction.update(requestRef, {
+      status,
+      updatedAt: serverTimestamp(),
+    });
+
+    if (status === "approved" && previousStatus !== "approved") {
+      transaction.update(doc(db, COLLECTIONS.users, studentId), {
+        joinedClubIds: arrayUnion(clubId),
+        updatedAt: serverTimestamp(),
+      });
+      transaction.update(doc(db, COLLECTIONS.clubs, clubId), {
+        memberCount: increment(1),
+      });
+    } else if (status !== "approved" && previousStatus === "approved") {
+      transaction.update(doc(db, COLLECTIONS.users, studentId), {
+        joinedClubIds: arrayRemove(clubId),
+        updatedAt: serverTimestamp(),
+      });
+      transaction.update(doc(db, COLLECTIONS.clubs, clubId), {
+        memberCount: increment(-1),
+      });
+    }
+
+    transaction.set(notificationRef, {
+      userId: studentId,
+      clubId,
+      title:
+        status === "approved"
+          ? "Club request approved"
+          : "Club request updated",
+      body:
+        status === "approved"
+          ? "Your club membership request was approved."
+          : "Your club membership request was not approved.",
+      type: "joinRequest",
+      status: "unread",
+      relatedHref: "/dashboard",
+      createdAt: serverTimestamp(),
+    });
   });
 }
 
-// Appends an officer reply to an existing student inquiry thread
+// Appends an officer reply to a student inquiry and fires a notification
 export async function replyToInquiry(inquiryId: string, body: string) {
   const db = await getDb();
   const inquiryRef = doc(db, COLLECTIONS.inquiries, inquiryId);
   const snapshot = await getDoc(inquiryRef);
   
-  const existingReplies =
-    snapshot.exists() && Array.isArray(snapshot.data().replies) ? snapshot.data().replies : [];
+  if (!snapshot.exists()) {
+    throw new Error("Inquiry not found.");
+  }
+
+  const inquiry = snapshot.data();
+  const existingReplies = Array.isArray(inquiry.replies) ? inquiry.replies : [];
   const reply = buildOfficerReply(existingReplies, body);
 
-  await updateDoc(inquiryRef, {
+  const batch = writeBatch(db);
+
+  // Append reply and ensure inquiry status remains open
+  batch.update(inquiryRef, {
     replies: [...existingReplies, reply],
     updatedAt: serverTimestamp(),
     status: "open" satisfies InquiryStatus,
   });
-  
+
+  // Notify the student who asked the question
+  batch.set(doc(collection(db, COLLECTIONS.notifications)), {
+    userId: inquiry.studentId,
+    clubId: inquiry.clubId,
+    title: "Club replied to your question",
+    body: reply.body,
+    type: "inquiry",
+    status: "unread",
+    relatedHref: "/notifications",
+    createdAt: serverTimestamp(),
+  });
+
+  await batch.commit();
   return reply;
 }
 
-// Marks an inquiry thread as completely resolved
+// Marks an inquiry as resolved
 export async function resolveInquiry(inquiryId: string) {
   const db = await getDb();
   await updateDoc(doc(db, COLLECTIONS.inquiries, inquiryId), {
