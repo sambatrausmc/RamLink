@@ -47,21 +47,23 @@ export function ClubHomeClient() {
       getInquiriesForClub(clubId),
       getResourcesForClub(clubId),
     ])
-      .then(([
-        nextClub,
-        nextEvents,
-        nextAnnouncements,
-        nextRequests,
-        nextInquiries,
-        nextResources,
-      ]) => {
-        setClub(nextClub);
-        setEvents(nextEvents);
-        setAnnouncements(nextAnnouncements);
-        setRequests(nextRequests);
-        setInquiries(nextInquiries);
-        setResources(nextResources);
-      })
+      .then(
+        ([
+          nextClub,
+          nextEvents,
+          nextAnnouncements,
+          nextRequests,
+          nextInquiries,
+          nextResources,
+        ]) => {
+          setClub(nextClub);
+          setEvents(nextEvents);
+          setAnnouncements(nextAnnouncements);
+          setRequests(nextRequests);
+          setInquiries(nextInquiries);
+          setResources(nextResources);
+        },
+      )
       .catch(() => setError("Unable to load the club workspace."));
   }, [clubId]);
 
@@ -90,10 +92,80 @@ export function ClubHomeClient() {
           </Link>
         }
       />
+
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      {/* Stats, sections, etc. — copy the full return from the PDF if needed */}
-      {/* ... rest of the component from Daniel's guide ... */}
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Pending requests"
+          value={
+            requests.filter((request) => request.status === "pending").length
+          }
+          detail="Need review"
+          icon={<ClipboardList className="h-5 w-5" />}
+        />
+        <StatCard
+          label="Upcoming events"
+          value={events.length}
+          detail="Published events"
+          icon={<CalendarDays className="h-5 w-5" />}
+        />
+        <StatCard
+          label="Resources"
+          value={resources.length}
+          detail="Forms and links"
+          icon={<FileText className="h-5 w-5" />}
+        />
+        <StatCard
+          label="Open inquiries"
+          value={
+            inquiries.filter((inquiry) => inquiry.status === "open").length
+          }
+          detail="Student questions"
+          icon={<Inbox className="h-5 w-5" />}
+        />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1fr_0.8fr]">
+        <div className="space-y-4">
+          <h2 className="font-display text-2xl font-semibold text-brand-ink">
+            Join requests
+          </h2>
+          {requests.slice(0, 3).map((request) => (
+            <JoinRequestRow key={request.id} request={request} />
+          ))}
+        </div>
+        <div className="space-y-4">
+          <h2 className="font-display text-2xl font-semibold text-brand-ink">
+            Recent inquiries
+          </h2>
+          {inquiries.slice(0, 3).map((inquiry) => (
+            <InquiryWorkflowCard key={inquiry.id} inquiry={inquiry} />
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <div className="space-y-4">
+          <h2 className="font-display text-2xl font-semibold text-brand-ink">
+            Upcoming events
+          </h2>
+          {events.slice(0, 3).map((event) => (
+            <EventCard key={event.id} event={event} compact />
+          ))}
+        </div>
+        <div className="space-y-4">
+          <h2 className="font-display text-2xl font-semibold text-brand-ink">
+            Announcements
+          </h2>
+          {announcements.slice(0, 3).map((announcement) => (
+            <AnnouncementCard
+              key={announcement.id}
+              announcement={announcement}
+            />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
