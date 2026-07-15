@@ -62,14 +62,15 @@ return (
                     </div>
                     }
                     />
+                    <section>
+                    <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                    <p className="text-sm font-semibold text-brand-green">Explore</p>
+                    <h2 className="font-display text-3xl font-semibold text-brand-ink">
+                    All clubs
+                    </h2>
 
-                            {/* Primary call to action for unregistered students */}
-                            <Link
-                                href="/register"
-                                className="inline-flex items-center justify-center gap-2 rounded-[11px] bg-brand-forest px-5 py-3.5 text-[15px] font-semibold leading-none text-white shadow-[0_6px_16px_rgba(11,93,59,0.22)] transition hover:-translate-y-0.5 hover:bg-brand-forestDark"
-                            >
-                                Create Account
-                                <ArrowRight className="h-4 w-4" />
+
                             </Link>
                             {/* Secondary action to navigate to the events discovery page */}
                             <Link
