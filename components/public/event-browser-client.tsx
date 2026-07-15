@@ -17,3 +17,16 @@ const filteredEvents = events.filter((event) =>
 (value) => value?.toLowerCase().includes(normalizedQuery),
 ),
 );
+return [...filteredEvents].sort((firstEvent, secondEvent) => {
+if (sortMode === "popular") {
+return secondEvent.rsvpCount - firstEvent.rsvpCount;
+}
+return firstEvent.date.localeCompare(secondEvent.date);
+});
+}
+type EventBrowserClientProps = {
+events: EventItem[];
+};
+export function EventBrowserClient({ events }: EventBrowserClientProps) {
+const [query, setQuery] = useState("");
+const [sortMode, setSortMode] = useState<EventSortMode>("soonest");
