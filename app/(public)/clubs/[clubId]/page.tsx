@@ -1,9 +1,6 @@
-// standard next.js routing and UI icons
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, CalendarDays, Mail, MapPin, Users } from "lucide-react";
-
-// grabbing Sam's shared cards and UI primitives
 import { AnnouncementCard } from "@/components/cards/announcement-card";
 import { EventCard } from "@/components/cards/event-card";
 import { ResourceCard } from "@/components/cards/resource-card";
@@ -11,6 +8,13 @@ import { ClubProfileActions } from "@/components/club/club-profile-actions";
 import { PageHero } from "@/components/common/page-hero";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+getAnnouncementsForClub,
+getClubByIdFromFirestore,
+getEventsForClub,
+getResourcesForClub,
+} from "@/lib/firebase/public-data";
+
 
 // pulling in our mock data helper functions
 import {
