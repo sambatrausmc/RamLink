@@ -69,7 +69,17 @@ return (
                     <h2 className="font-display text-3xl font-semibold text-brand-ink">
                     All clubs
                     </h2>
-
+                            </div>
+                            <p className="text-sm text-brand-muted">
+                            Sign in to save clubs or request to join.
+                            </p>
+                            </div>
+                            <ClubDirectoryClient clubs={clubs} interests={interests} />
+                            </section>
+                            </div>
+                            </div>
+                            );
+                            }
 
                             </Link>
                             {/* Secondary action to navigate to the events discovery page */}
