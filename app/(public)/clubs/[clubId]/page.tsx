@@ -26,14 +26,22 @@ const { clubId } = await params;
 const club = await getClubByIdFromFirestore(clubId);
 if (!club) {
 notFound();
+}
+const [clubEvents, clubAnnouncements, clubResources] = await Promise.all([
+  getEventsForClub(club.id),
+  getAnnouncementsForClub(club.id),
+  getResourcesForClub(club.id),
+]);
 
-// pulling in our mock data helper functions
-import {
-    getAnnouncementsForClub,
-    getClubById,
-    getEventsForClub,
-    getResourcesForClub,
-} from "@/lib/mock-data";
+return (
+  <div className="bg-brand-surface/70">
+    <div className="mx-auto w-full max-w-[1180px] space-y-10 px-5 py-12 md:px-6 md:py-16">
+      <PageHero
+        eyebrow={club.category}
+        title={club.name}
+        description={club.description}
+        actions={
+          <>
 
 // this sets up the expected URL parameter for the dynamic route (e.g., /clubs/cs-club)
 type ClubProfilePageProps = {
