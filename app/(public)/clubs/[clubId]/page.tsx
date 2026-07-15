@@ -1,6 +1,8 @@
+// standard next.js routing and UI icons
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, CalendarDays, Mail, MapPin, Users } from "lucide-react";
+// Shared cards and UI components
 import { AnnouncementCard } from "@/components/cards/announcement-card";
 import { EventCard } from "@/components/cards/event-card";
 import { ResourceCard } from "@/components/cards/resource-card";
@@ -8,13 +10,14 @@ import { ClubProfileActions } from "@/components/club/club-profile-actions";
 import { PageHero } from "@/components/common/page-hero";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+// Firestore data helper functions
 import {
 getAnnouncementsForClub,
 getClubByIdFromFirestore,
 getEventsForClub,
 getResourcesForClub,
 } from "@/lib/firebase/public-data";
-
+// Sets up the expected URL parameter for the dynamic route (e.g., /clubs/cs-club)
 type ClubProfilePageProps = {
 params: Promise<{ clubId: string }>;
 };
@@ -22,11 +25,15 @@ export const dynamic = "force-dynamic";
 export default async function ClubProfilePage({
 params,
 }: ClubProfilePageProps) {
+    // Grab the specific club ID from the URL
 const { clubId } = await params;
+// Fetch the main club data from Firestore
 const club = await getClubByIdFromFirestore(clubId);
+// If someone types a random club URL that doesn't exist, send them to the 404 page
 if (!club) {
 notFound();
 }
+// Fetch all related club content from Firestore
 const [clubEvents, clubAnnouncements, clubResources] = await Promise.all([
   getEventsForClub(club.id),
   getAnnouncementsForClub(club.id),
@@ -34,14 +41,17 @@ const [clubEvents, clubAnnouncements, clubResources] = await Promise.all([
 ]);
 
 return (
+// Main background wrapper
   <div className="bg-brand-surface/70">
     <div className="mx-auto w-full max-w-[1180px] space-y-10 px-5 py-12 md:px-6 md:py-16">
+{/* Hero section displaying the club's main information */}
       <PageHero
         eyebrow={club.category}
         title={club.name}
         description={club.description}
         actions={
           <>
+          {/* Prompt visitors to sign in if they want to join */}
   <Link
     href="/login"
     className={`
@@ -60,7 +70,8 @@ return (
       inline-flex items-center justify-center rounded-[11px] border
       border-brand-mist bg-white px-5 py-3.5 text-[15px] font-semibold
       leading-none text-brand-forest transition hover:-translate-y-0.5
-      hover:border-brand-greenLight hover:bg-brand-surface
+      hover:border-brand-greenLight hover:bg-brand-surfacev className="mx-auto w-full max-w-[1180px] space-y-10 px-5 py-12 md:px-6 md:py-16">
+
     `}
   >
     Create Account
@@ -68,6 +79,7 @@ return (
   </>
 }
 aside={
+    // Side card displaying quick club information
   <div className="rounded-[22px] border border-brand-mist bg-white p-5 shadow-lift">
     <div
       className={`
@@ -96,8 +108,13 @@ aside={
      </div>
     }
 />
+{/* Main content grid:
+    Wide left column for club details and a narrower right column for actions and announcements.
+*/}
 <section className="grid gap-6 xl:grid-cols-[1fr_360px]">
+{/* LEFT COLUMN */}
   <div className="space-y-6">
+  {/* Club tags and contact email */}
     <Card>
       <CardContent>
         <div className="flex flex-wrap gap-2">
@@ -113,12 +130,12 @@ aside={
         </p>
       </CardContent>
     </Card>
-                        {/* upcoming events list */}
+                       {/* Upcoming events */}
                        <section className="space-y-4">
                          <h2 className="font-display text-2xl font-semibold text-brand-ink">
                            Upcoming events
                          </h2>
-
+                        {/* Show a friendly empty state if no events are available */}
                          {clubEvents.length ? (
                            clubEvents.map((event) => (
                              <EventCard
