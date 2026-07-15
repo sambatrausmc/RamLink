@@ -50,6 +50,18 @@ return (
                 <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-brand-mist text-brand-forest">
                 <Users className="h-6 w-6" />
                 </div>
+                    <div>
+                    <p className="font-display text-base font-semibold text-brand-ink">
+                    {clubs.length} active clubs
+                    </p>
+                    <p className="text-sm text-brand-muted">
+                    Across academics, service, business, and more.
+                    </p>
+                    </div>
+                    </div>
+                    </div>
+                    }
+                    />
 
                             {/* Primary call to action for unregistered students */}
                             <Link
