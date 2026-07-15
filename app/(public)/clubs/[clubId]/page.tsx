@@ -183,36 +183,47 @@ aside={
 
                     {/* RIGHT COLUMN */}
                     <aside className="space-y-6">
-                        {/* Mocked student action panel for join requests and official club questions. */}
-                        <ClubProfileActions club={club} />
+                    {/* Student action panel for joining, saving, and contacting the club */}
+                      <ClubProfileActions club={club} />
+                    {/* Sign-in call-to-action */}
+                      <Card className="bg-brand-forest text-white">
+                        <CardContent>
+                          <h2 className="font-display text-xl font-semibold">
+                            Sign in to join or save this club.
+                          </h2>
 
-                        {/* big green call-to-action box to encourage signups */}
-                        <Card className="bg-brand-forest text-white">
-                            <CardContent>
-                                <h2 className="font-display text-xl font-semibold">Sign in to join or save this club.</h2>
-                                <p className="mt-2 text-sm leading-6 text-brand-mist/85">
-                                    Create an account to request membership, save clubs, and follow updates.
-                                </p>
-                                <Link
-                                    href="/login"
-                                    className="mt-5 inline-flex items-center justify-center rounded-[11px] bg-brand-goldLight px-4 py-3 text-sm font-semibold leading-none text-brand-forestDark transition hover:-translate-y-0.5 hover:bg-brand-gold"
-                                >
-                                    Sign In
-                                </Link>
-                            </CardContent>
-                        </Card>
+                          <p className="mt-2 text-sm leading-6 text-brand-mist/85">
+                            Create an account to request membership, save clubs, and follow updates.
+                          </p>
 
-                        {/* latest club announcements feed */}
-                        <section className="space-y-4">
-                            <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-brand-ink">Recent updates</h2>
-                            {clubAnnouncements.map((announcement) => (
-                                <AnnouncementCard key={announcement.id} announcement={announcement} />
-                            ))}
-                        </section>
+                          <Link
+                            href="/login"
+                            className={`
+                              mt-5 inline-flex items-center justify-center rounded-[11px]
+                              bg-brand-goldLight px-4 py-3 text-sm font-semibold leading-none
+                              text-brand-forestDark
+                            `}
+                          >
+                            Sign In
+                          </Link>
+                        </CardContent>
+                      </Card>
+                       {/* Recent club announcements */}
+                      <section className="space-y-4">
+                        <h2 className="font-display text-2xl font-semibold text-brand-ink">
+                          Recent updates
+                        </h2>
+
+                        {clubAnnouncements.map((announcement) => (
+                          <AnnouncementCard
+                            key={announcement.id}
+                            announcement={announcement}
+                          />
+                        ))}
+                      </section>
                     </aside>
-
-                </section>
-            </div>
-        </div>
-    );
-}
+                    </section>
+                    </div>
+                    </div>
+                    );
+                    }
