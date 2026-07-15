@@ -27,6 +27,18 @@ return (
            text-white shadow-[0_6px_16px_rgba(11,93,59,0.22)] transition
            hover:-translate-y-0.5 hover:bg-brand-forestDark
            `}
+               >
+               Create Account
+               <ArrowRight className="h-4 w-4" />
+               </Link>
+               <Link
+               href="/events"
+               className={`
+               inline-flex items-center justify-center rounded-[11px] border
+               border-brand-mist bg-white px-5 py-3.5 text-[15px] font-semibold
+               leading-none text-brand-forest transition hover:-translate-y-0.5
+               hover:border-brand-greenLight hover:bg-brand-surface
+               `}
 
                     description="Browse student organizations, compare meeting times, and find the campus groups that fit you."
                     actions={
