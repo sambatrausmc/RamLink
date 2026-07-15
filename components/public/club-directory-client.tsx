@@ -57,3 +57,12 @@ onChange={(event) => setQuery(event.target.value)}
 ))}
 </div>
 ) : (
+    <EmptyState
+    icon={<Users className="h-5 w-5" />}
+    title="No matching clubs"
+    description="Try another club name, category, or interest."
+    />
+    )}
+    </div>
+    );
+    }
