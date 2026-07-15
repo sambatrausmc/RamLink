@@ -40,3 +40,13 @@ placeholder="Search clubs by name, category, or interest..."
 value={query}
 onChange={(event) => setQuery(event.target.value)}
 />
+</label>
+<div className="flex flex-wrap gap-2">
+{interests.slice(0, 5).map((interest) => (
+<Badge key={interest.id} tone="green">
+{interest.name}
+</Badge>
+))}
+</div>
+</div>
+</section>
