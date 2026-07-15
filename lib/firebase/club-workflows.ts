@@ -8,6 +8,7 @@ import {
   getDocs,
   increment,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
@@ -174,60 +175,63 @@ export async function updateJoinRequestStatus(
 ) {
   const db = await getDb();
   const requestRef = doc(db, COLLECTIONS.joinRequests, requestId);
-  const requestSnapshot = await getDoc(requestRef);
-  
-  if (!requestSnapshot.exists()) {
-    throw new Error("Join request not found.");
-  }
+  const notificationRef = doc(collection(db, COLLECTIONS.notifications));
 
-  const request = requestSnapshot.data();
-  const studentId = String(request.studentId ?? "");
-  const clubId = String(request.clubId ?? "");
-  const previousStatus = request.status as RequestStatus;
+  await runTransaction(db, async (transaction) => {
+    const requestSnapshot = await transaction.get(requestRef);
+    if (!requestSnapshot.exists()) {
+      throw new Error("Join request not found.");
+    }
 
-  const batch = writeBatch(db);
-  
-  // 1. Update the status on the join request itself
-  batch.update(requestRef, { status, updatedAt: serverTimestamp() });
+    const request = requestSnapshot.data();
+    const studentId = String(request.studentId ?? "");
+    const clubId = String(request.clubId ?? "");
+    const previousStatus = request.status as RequestStatus;
 
-  // 2. If newly approved, add club to student's joined array and increment club member count
-  if (status === "approved" && previousStatus !== "approved") {
-    batch.update(doc(db, COLLECTIONS.users, studentId), {
-      joinedClubIds: arrayUnion(clubId),
+    if (!studentId || !clubId) {
+      throw new Error("Join request is missing membership information.");
+    }
+
+    transaction.update(requestRef, {
+      status,
       updatedAt: serverTimestamp(),
     });
-    batch.update(doc(db, COLLECTIONS.clubs, clubId), {
-      memberCount: increment(1),
-    });
-  } 
-  // 3. If revoking an approved membership, remove from array and decrement count
-  else if (status !== "approved" && previousStatus === "approved") {
-    batch.update(doc(db, COLLECTIONS.users, studentId), {
-      joinedClubIds: arrayRemove(clubId),
-      updatedAt: serverTimestamp(),
-    });
-    batch.update(doc(db, COLLECTIONS.clubs, clubId), {
-      memberCount: increment(-1),
-    });
-  }
 
-  // 4. Send an unread system notification to the student
-  batch.set(doc(collection(db, COLLECTIONS.notifications)), {
-    userId: studentId,
-    clubId,
-    title: status === "approved" ? "Club request approved" : "Club request updated",
-    body:
-      status === "approved"
-        ? "Your club membership request was approved."
-        : "Your club membership request was not approved.",
-    type: "joinRequest",
-    status: "unread",
-    relatedHref: "/dashboard",
-    createdAt: serverTimestamp(),
+    if (status === "approved" && previousStatus !== "approved") {
+      transaction.update(doc(db, COLLECTIONS.users, studentId), {
+        joinedClubIds: arrayUnion(clubId),
+        updatedAt: serverTimestamp(),
+      });
+      transaction.update(doc(db, COLLECTIONS.clubs, clubId), {
+        memberCount: increment(1),
+      });
+    } else if (status !== "approved" && previousStatus === "approved") {
+      transaction.update(doc(db, COLLECTIONS.users, studentId), {
+        joinedClubIds: arrayRemove(clubId),
+        updatedAt: serverTimestamp(),
+      });
+      transaction.update(doc(db, COLLECTIONS.clubs, clubId), {
+        memberCount: increment(-1),
+      });
+    }
+
+    transaction.set(notificationRef, {
+      userId: studentId,
+      clubId,
+      title:
+        status === "approved"
+          ? "Club request approved"
+          : "Club request updated",
+      body:
+        status === "approved"
+          ? "Your club membership request was approved."
+          : "Your club membership request was not approved.",
+      type: "joinRequest",
+      status: "unread",
+      relatedHref: "/dashboard",
+      createdAt: serverTimestamp(),
+    });
   });
-
-  // Execute all updates atomically
-  await batch.commit();
 }
 
 // Appends an officer reply to a student inquiry and fires a notification
@@ -245,7 +249,7 @@ export async function replyToInquiry(inquiryId: string, body: string) {
   const reply = buildOfficerReply(existingReplies, body);
 
   const batch = writeBatch(db);
-  
+
   // Append reply and ensure inquiry status remains open
   batch.update(inquiryRef, {
     replies: [...existingReplies, reply],
