@@ -114,19 +114,29 @@ aside={
       </CardContent>
     </Card>
                         {/* upcoming events list */}
-                        <section className="space-y-4">
-                            <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-brand-ink">Upcoming events</h2>
-                            {/* checks if they have events; if not, shows a friendly empty state message */}
-                            {clubEvents.length ? (
-                                clubEvents.map((event) => <EventCard key={event.id} event={event} actionMode="public" />)
-                            ) : (
-                                <Card>
-                                    <CardContent>
-                                        <p className="text-sm text-brand-muted">No upcoming events are listed yet.</p>
-                                    </CardContent>
-                                </Card>
-                            )}
-                        </section>
+                       <section className="space-y-4">
+                         <h2 className="font-display text-2xl font-semibold text-brand-ink">
+                           Upcoming events
+                         </h2>
+
+                         {clubEvents.length ? (
+                           clubEvents.map((event) => (
+                             <EventCard
+                               key={event.id}
+                               event={event}
+                               actionMode="public"
+                             />
+                           ))
+                         ) : (
+                           <Card>
+                             <CardContent>
+                               <p className="text-sm text-brand-muted">
+                                 No upcoming events are listed yet.
+                               </p>
+                             </CardContent>
+                           </Card>
+                         )}
+                       </section>
 
                         {/* forms and resources list */}
                         <section className="space-y-4">
