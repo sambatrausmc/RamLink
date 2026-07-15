@@ -15,6 +15,17 @@ getEventsForClub,
 getResourcesForClub,
 } from "@/lib/firebase/public-data";
 
+type ClubProfilePageProps = {
+params: Promise<{ clubId: string }>;
+};
+export const dynamic = "force-dynamic";
+export default async function ClubProfilePage({
+params,
+}: ClubProfilePageProps) {
+const { clubId } = await params;
+const club = await getClubByIdFromFirestore(clubId);
+if (!club) {
+notFound();
 
 // pulling in our mock data helper functions
 import {
