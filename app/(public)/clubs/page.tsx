@@ -14,14 +14,20 @@ return (
        eyebrow="Club Directory"
        title={
        <>
-                */}
-                <PageHero
-                    eyebrow="Club Directory"
-                    title={
-                        <>
-                            Find your <span className="text-brand-forest">community.</span>
-                        </>
-                    }
+           </>
+           }
+           description="Browse student organizations, compare meeting times, and find the campus groups that fit you."
+           actions={
+           <>
+           <Link
+           href="/register"
+           className={`
+           inline-flex items-center justify-center gap-2 rounded-[11px]
+           bg-brand-forest px-5 py-3.5 text-[15px] font-semibold leading-none
+           text-white shadow-[0_6px_16px_rgba(11,93,59,0.22)] transition
+           hover:-translate-y-0.5 hover:bg-brand-forestDark
+           `}
+
                     description="Browse student organizations, compare meeting times, and find the campus groups that fit you."
                     actions={
                         <>
