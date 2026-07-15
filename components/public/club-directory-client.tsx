@@ -50,3 +50,10 @@ onChange={(event) => setQuery(event.target.value)}
 </div>
 </div>
 </section>
+{filteredClubs.length ? (
+<div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+{filteredClubs.map((club) => (
+<ClubCard key={club.id} club={club} />
+))}
+</div>
+) : (
