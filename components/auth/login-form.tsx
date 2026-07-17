@@ -1,16 +1,18 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
-import { loginWithEmailAndPassword } from "@/lib/firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-export function LoginForm() {
+import {
+loginWithEmailAndPassword,
+resetPasswordForEmail,
+} from "@/lib/firebase/auth";
   // Grab the Next.js router so we can redirect them after a successful login
-  const router = useRouter();
-  
+
+
+
   // Setup our state to hold what the user is typing in the boxes
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
