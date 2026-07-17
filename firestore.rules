@@ -111,7 +111,9 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if true;
       allow create: if managesClub(request.resource.data.clubId);
-      allow update: if managesClub(resource.data.clubId) ||
+      allow update: if
+        (managesClub(resource.data.clubId) &&
+          request.resource.data.clubId == resource.data.clubId) ||
         studentUpdatesOwnRsvp(eventId);
       allow delete: if managesClub(resource.data.clubId);
     }
@@ -119,13 +121,17 @@ service cloud.firestore {
     match /announcements/{announcementId} {
       allow read: if true;
       allow create: if managesClub(request.resource.data.clubId);
-      allow update, delete: if managesClub(resource.data.clubId);
+      allow update: if managesClub(resource.data.clubId) &&
+        request.resource.data.clubId == resource.data.clubId;
+      allow delete: if managesClub(resource.data.clubId);
     }
 
     match /resources/{resourceId} {
       allow read: if true;
       allow create: if managesClub(request.resource.data.clubId);
-      allow update, delete: if managesClub(resource.data.clubId);
+      allow update: if managesClub(resource.data.clubId) &&
+        request.resource.data.clubId == resource.data.clubId;
+      allow delete: if managesClub(resource.data.clubId);
     }
 
     match /interests/{interestId} {
