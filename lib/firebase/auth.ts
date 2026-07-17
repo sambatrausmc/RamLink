@@ -22,14 +22,19 @@ return auth;
 
 
 export async function registerStudentAccount(input: RegisterStudentInput) {
-  // Firebase Auth creates the login account. Firestore stores the student profile data.
-  const auth = await getAuthClient();
-  const credential = await createUserWithEmailAndPassword(auth, input.email, input.password);
-  await updateProfile(credential.user, {
-    displayName: input.displayName,
-  });
-  await createStudentProfile(credential.user.uid, {
-    displayName: input.displayName,
+// Firebase Auth creates the login account. Firestore stores the student profile data.
+const auth = await getAuthClient();
+const credential = await createUserWithEmailAndPassword(
+auth,
+input.email,
+input.password,
+);
+await updateProfile(credential.user, {
+displayName: input.displayName,
+});
+await createStudentProfile(credential.user.uid, {
+displayName: input.displayName,
+
     email: input.email,
   });
   return credential.user;
