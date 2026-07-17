@@ -1,21 +1,25 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
+import {
+createUserWithEmailAndPassword,
+sendPasswordResetEmail,
+signInWithEmailAndPassword,
+signOut,
+updateProfile,
+} from "firebase/auth";
 import { createStudentProfile } from "@/lib/firebase/user-profile";
-
 export type RegisterStudentInput = {
-  displayName: string;
-  email: string;
-  password: string;
+displayName: string;
+email: string;
+password: string;
 };
-
 export type LoginInput = {
-  email: string;
-  password: string;
+email: string;
+password: string;
 };
-
 async function getAuthClient() {
-  const { auth } = await import("@/lib/firebase/client");
-  return auth;
+const { auth } = await import("@/lib/firebase/client");
+return auth;
 }
+
 
 export async function registerStudentAccount(input: RegisterStudentInput) {
   // Firebase Auth creates the login account. Firestore stores the student profile data.
