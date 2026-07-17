@@ -155,7 +155,10 @@ service cloud.firestore {
         request.resource.data.status in ["approved", "rejected"] &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["status", "updatedAt"]);
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() ||
+        (isSignedIn() &&
+          resource.data.studentId == request.auth.uid &&
+          resource.data.status == "pending");
     }
 
     match /inquiries/{inquiryId} {

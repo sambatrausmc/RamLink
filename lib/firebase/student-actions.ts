@@ -285,6 +285,23 @@ export async function createJoinRequest(
   } satisfies JoinRequest;
 }
 
+export async function cancelJoinRequest(userId: string, requestId: string) {
+  const db = await getDb();
+  const requestRef = doc(db, COLLECTIONS.joinRequests, requestId);
+
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(requestRef);
+    if (!snapshot.exists()) {
+      throw new Error("Join request not found.");
+    }
+    const request = snapshot.data();
+    if (request.studentId !== userId || request.status !== "pending") {
+      throw new Error("Only your pending request can be cancelled.");
+    }
+    transaction.delete(requestRef);
+  });
+}
+
 // Creates a student inquiry thread and triggers an immediate feedback notification
 export async function createClubInquiry(
   input: ClubInquiryInput,
