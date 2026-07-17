@@ -35,18 +35,24 @@ displayName: input.displayName,
 await createStudentProfile(credential.user.uid, {
 displayName: input.displayName,
 
-    email: input.email,
-  });
-  return credential.user;
-}
-
-export async function loginWithEmailAndPassword(input: LoginInput) {
-  const auth = await getAuthClient();
-  const credential = await signInWithEmailAndPassword(auth, input.email, input.password);
-  return credential.user;
-}
-
-export async function logoutCurrentUser() {
-  const auth = await getAuthClient();
-  await signOut(auth);
-}
+   email: input.email,
+   });
+   return credential.user;
+   }
+   export async function loginWithEmailAndPassword(input: LoginInput) {
+   const auth = await getAuthClient();
+   const credential = await signInWithEmailAndPassword(
+   auth,
+   input.email,
+   input.password,
+   );
+   return credential.user;
+   }
+   export async function logoutCurrentUser() {
+   const auth = await getAuthClient();
+   await signOut(auth);
+   }
+   export async function resetPasswordForEmail(email: string) {
+   const auth = await getAuthClient();
+   await sendPasswordResetEmail(auth, email);
+   }
