@@ -6,6 +6,7 @@ import {
   doc,
   getDocs,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
@@ -169,16 +170,42 @@ export async function toggleSavedEvent(
 export async function toggleEventRsvp(
   userId: string,
   eventId: string,
-  currentlyRsvped: boolean,
 ) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.users, userId), {
-    rsvpedEventIds: currentlyRsvped
-      ? arrayRemove(eventId)
-      : arrayUnion(eventId),
-    updatedAt: serverTimestamp(),
+  const userRef = doc(db, COLLECTIONS.users, userId);
+  const eventRef = doc(db, COLLECTIONS.events, eventId);
+
+  return runTransaction(db, async (transaction) => {
+    const [userSnapshot, eventSnapshot] = await Promise.all([
+      transaction.get(userRef),
+      transaction.get(eventRef),
+    ]);
+
+    if (!userSnapshot.exists() || !eventSnapshot.exists()) {
+      throw new Error("The student or event record was not found.");
+    }
+
+    const savedRsvps = Array.isArray(userSnapshot.data().rsvpedEventIds)
+      ? userSnapshot.data().rsvpedEventIds
+      : [];
+    const currentlySaved = savedRsvps.includes(eventId);
+    const nextRsvp = !currentlySaved;
+    const currentCount = Number(eventSnapshot.data().rsvpCount ?? 0);
+
+    transaction.update(userRef, {
+      rsvpedEventIds: nextRsvp
+        ? arrayUnion(eventId)
+        : arrayRemove(eventId),
+      updatedAt: serverTimestamp(),
+    });
+
+    transaction.update(eventRef, {
+      rsvpCount: Math.max(0, currentCount + (nextRsvp ? 1 : -1)),
+      updatedAt: serverTimestamp(),
+    });
+
+    return nextRsvp;
   });
-  return !currentlyRsvped;
 }
 
 // Creates a join request in Firestore and triggers an immediate feedback notification
@@ -195,6 +222,7 @@ export async function createJoinRequest(
     status: "pending" as RequestStatus,
     createdAt: serverTimestamp(),
   };
+
   const documentReference = await addDoc(
     collection(db, COLLECTIONS.joinRequests),
     request,
@@ -238,6 +266,7 @@ export async function createClubInquiry(
     createdAt: serverTimestamp(),
     replies: [],
   };
+
   const documentReference = await addDoc(
     collection(db, COLLECTIONS.inquiries),
     inquiry,
