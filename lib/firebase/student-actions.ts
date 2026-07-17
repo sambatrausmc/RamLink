@@ -224,6 +224,17 @@ export async function createJoinRequest(
   input: JoinRequestInput,
 ): Promise<JoinRequest> {
   const db = await getDb();
+
+  const existingRequests = await getStudentJoinRequests(input.userId);
+  const activeRequest = existingRequests.find(
+    (request) =>
+      request.clubId === input.clubId &&
+      (request.status === "pending" || request.status === "approved"),
+  );
+  if (activeRequest) {
+    throw new Error("An active join request already exists for this club.");
+  }
+
   const request = {
     clubId: input.clubId,
     clubName: input.clubName ?? "",
@@ -234,25 +245,38 @@ export async function createJoinRequest(
     createdAt: serverTimestamp(),
   };
 
-  const documentReference = await addDoc(
-    collection(db, COLLECTIONS.joinRequests),
-    request,
+  const requestRef = doc(
+    db,
+    COLLECTIONS.joinRequests,
+    `${input.userId}_${input.clubId}`,
   );
+  const notificationRef = doc(collection(db, COLLECTIONS.notifications));
 
-  // Automatically generate a notification alerting the student that their request is pending
-  await addDoc(collection(db, COLLECTIONS.notifications), {
-    userId: input.userId,
-    clubId: input.clubId,
-    title: "Join request sent",
-    body: "Your membership request was sent to the club officers.",
-    type: "joinRequest",
-    status: "unread",
-    relatedHref: "/dashboard",
-    createdAt: serverTimestamp(),
+  await runTransaction(db, async (transaction) => {
+    const currentRequest = await transaction.get(requestRef);
+    if (
+      currentRequest.exists() &&
+      (currentRequest.data().status === "pending" ||
+        currentRequest.data().status === "approved")
+    ) {
+      throw new Error("An active join request already exists for this club.");
+    }
+
+    transaction.set(requestRef, request);
+    transaction.set(notificationRef, {
+      userId: input.userId,
+      clubId: input.clubId,
+      title: "Join request sent",
+      body: "Your membership request was sent to the club officers.",
+      type: "joinRequest",
+      status: "unread",
+      relatedHref: "/dashboard",
+      createdAt: serverTimestamp(),
+    });
   });
 
   return {
-    id: documentReference.id,
+    id: requestRef.id,
     clubId: request.clubId,
     studentId: request.studentId,
     message: request.message,
