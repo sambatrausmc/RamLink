@@ -138,6 +138,17 @@ export async function getStudentNotifications(userId: string) {
   return snapshot.docs.map(normalizeNotification);
 }
 
+export async function updateNotificationStatus(
+  notificationId: string,
+  status: NotificationStatus,
+) {
+  const db = await getDb();
+  await updateDoc(doc(db, COLLECTIONS.notifications, notificationId), {
+    status,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 // Toggles club bookmark IDs inside the student's user document
 export async function toggleSavedClub(
   userId: string,
