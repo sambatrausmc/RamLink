@@ -50,3 +50,45 @@ return (
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
+    </label>
+       <select
+         aria-label="Sort events"
+         className={`
+           h-11 rounded-[11px] border border-brand-mist bg-white px-3
+           text-sm font-medium text-brand-ink outline-none
+           focus:border-brand-green
+         `}
+         value={sortMode}
+         onChange={(event) =>
+           setSortMode(event.target.value as EventSortMode)
+         }
+       >
+         <option value="soonest">Soonest date</option>
+         <option value="popular">Most RSVPs</option>
+       </select>
+       </div>
+
+       <p className="mt-3 text-sm font-medium text-brand-muted">
+         {visibleEvents.length}{" "}
+         {visibleEvents.length === 1 ? "event" : "events"}
+       </p>
+       </div>
+
+       {visibleEvents.length ? (
+         visibleEvents.map((event) => (
+           <EventCard
+             key={event.id}
+             event={event}
+             actionMode="public"
+           />
+         ))
+       ) : (
+         <EmptyState
+           icon={<CalendarDays className="h-5 w-5" />}
+           title="No matching events"
+           description="Try another event name, club, or campus location."
+         />
+       )}
+       </section>
+       );
+       }
