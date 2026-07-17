@@ -6,7 +6,9 @@ import {
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import {
+  arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -15,6 +17,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -40,6 +43,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     await testEnvironment.clearFirestore();
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       const database = context.firestore();
+
       await setDoc(doc(database, "users/student-1"), {
         role: "student",
         displayName: "Student One",
@@ -48,32 +52,43 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         savedEventIds: [],
         rsvpedEventIds: [],
       });
+
       await setDoc(doc(database, "users/officer-1"), {
         role: "clubOfficer",
         displayName: "Officer One",
         joinedClubIds: [],
         managedClubIds: ["club-1"],
       });
+
       await setDoc(doc(database, "users/member-1"), {
         role: "student",
         displayName: "Managed Club Member",
         joinedClubIds: ["club-1"],
       });
+
       await setDoc(doc(database, "users/unrelated-1"), {
         role: "student",
         displayName: "Unrelated Student",
         joinedClubIds: ["club-2"],
       });
+
       await setDoc(doc(database, "joinRequests/request-1"), {
         clubId: "club-1",
         studentId: "student-1",
         status: "pending",
       });
+
       await setDoc(doc(database, "inquiries/inquiry-1"), {
         clubId: "club-1",
         studentId: "student-1",
         status: "open",
         replies: [],
+      });
+
+      await setDoc(doc(database, "events/event-1"), {
+        clubId: "club-1",
+        title: "Campus Event",
+        rsvpCount: 0,
       });
     });
   });
@@ -94,11 +109,50 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         updatedAt: serverTimestamp(),
       }),
     );
+
     await assertFails(
       updateDoc(studentRef, {
         joinedClubIds: ["club-1"],
         updatedAt: serverTimestamp(),
       }),
+    );
+  });
+
+  it("requires RSVP profile and event count updates to stay together", async () => {
+    const studentDb = testEnvironment
+      .authenticatedContext("student-1")
+      .firestore();
+
+    const batch = writeBatch(studentDb);
+    batch.update(doc(studentDb, "users/student-1"), {
+      rsvpedEventIds: arrayUnion("event-1"),
+      updatedAt: serverTimestamp(),
+    });
+    batch.update(doc(studentDb, "events/event-1"), {
+      rsvpCount: 1,
+      updatedAt: serverTimestamp(),
+    });
+    await assertSucceeds(batch.commit());
+
+    await assertFails(
+      updateDoc(doc(studentDb, "events/event-1"), { rsvpCount: 2 }),
+    );
+  });
+
+  it("allows a student to cancel only their own pending request", async () => {
+    const studentDb = testEnvironment
+      .authenticatedContext("student-1")
+      .firestore();
+    const unrelatedDb = testEnvironment
+      .authenticatedContext("unrelated-1")
+      .firestore();
+
+    await assertFails(
+      deleteDoc(doc(unrelatedDb, "joinRequests/request-1")),
+    );
+
+    await assertSucceeds(
+      deleteDoc(doc(studentDb, "joinRequests/request-1")),
     );
   });
 
@@ -114,6 +168,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         updatedAt: serverTimestamp(),
       }),
     );
+
     await assertFails(
       updateDoc(requestRef, {
         studentId: "student-2",
@@ -126,13 +181,14 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     const officerDb = testEnvironment
       .authenticatedContext("officer-1")
       .firestore();
+
     const memberQuery = query(
       collection(officerDb, "users"),
       where("joinedClubIds", "array-contains", "club-1"),
     );
-
     const snapshot = await assertSucceeds(getDocs(memberQuery));
     expect(snapshot.docs.map((member) => member.id)).toEqual(["member-1"]);
+
     await assertFails(getDoc(doc(officerDb, "users/unrelated-1")));
     await assertFails(getDocs(collection(officerDb, "users")));
   });
@@ -157,6 +213,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         updatedAt: serverTimestamp(),
       }),
     );
+
     await assertFails(
       updateDoc(inquiryRef, {
         clubId: "club-2",
