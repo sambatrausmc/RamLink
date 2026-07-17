@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { EventCard } from "@/components/cards/event-card";
 import { useManagedClub } from "@/components/club/use-managed-club";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { createClubEvent } from "@/lib/firebase/club-workflows";
+import {
+  createClubEvent,
+  deleteClubEvent,
+  updateClubEvent,
+} from "@/lib/firebase/club-workflows";
 import {
   getClubByIdFromFirestore,
   getEventsForClub,
@@ -81,9 +85,42 @@ export function ClubEventsClient() {
     }
   }
 
+  async function handleEdit(
+    formEvent: FormEvent<HTMLFormElement>,
+    eventId: string,
+  ) {
+    formEvent.preventDefault();
+    if (!clubId) return;
+    const form = new FormData(formEvent.currentTarget);
+    try {
+      await updateClubEvent(eventId, {
+        title: String(form.get("title") ?? "").trim(),
+        description: String(form.get("description") ?? "").trim(),
+        date: String(form.get("date") ?? ""),
+        startTime: String(form.get("startTime") ?? ""),
+        endTime: String(form.get("endTime") ?? ""),
+        location: String(form.get("location") ?? "").trim(),
+      });
+      await loadEvents(clubId);
+      setFeedback("Event updated.");
+    } catch {
+      setFeedback("Unable to update the event.");
+    }
+  }
+
+  async function handleDelete(eventId: string) {
+    if (!clubId || !window.confirm("Delete this event?")) return;
+    try {
+      await deleteClubEvent(eventId);
+      await loadEvents(clubId);
+      setFeedback("Event deleted.");
+    } catch {
+      setFeedback("Unable to delete the event.");
+    }
+  }
+
   if (loading)
     return <p className="text-sm text-brand-muted">Loading club access...</p>;
-
   if (!clubId)
     return (
       <p className="text-sm text-red-600">
@@ -132,7 +169,36 @@ export function ClubEventsClient() {
       </Card>
       <section className="space-y-4">
         {events.map((item) => (
-          <EventCard key={item.id} event={item} compact />
+          <div key={item.id} className="space-y-3">
+            <EventCard event={item} compact />
+            <details className="rounded-[12px] border border-brand-mist bg-white p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-brand-forest">
+                Edit event
+              </summary>
+              <form
+                className="mt-4 grid gap-3 md:grid-cols-2"
+                onSubmit={(event) => handleEdit(event, item.id)}
+              >
+                <Input name="title" defaultValue={item.title} required />
+                <Input name="location" defaultValue={item.location} required />
+                <Input name="date" type="date" defaultValue={item.date} required />
+                <Input name="startTime" type="time" defaultValue={item.startTime} required />
+                <Input name="endTime" type="time" defaultValue={item.endTime} required />
+                <textarea
+                  name="description"
+                  defaultValue={item.description}
+                  className="min-h-24 rounded-[12px] border border-brand-mist px-3.5 py-3 text-sm md:col-span-2"
+                  required
+                />
+                <Button className="w-fit" size="sm" type="submit">
+                  <Pencil className="h-4 w-4" /> Update event
+                </Button>
+              </form>
+            </details>
+            <Button size="sm" variant="outline" onClick={() => handleDelete(item.id)}>
+              <Trash2 className="h-4 w-4" /> Delete event
+            </Button>
+          </div>
         ))}
       </section>
     </div>
