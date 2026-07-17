@@ -30,3 +30,23 @@ events: EventItem[];
 export function EventBrowserClient({ events }: EventBrowserClientProps) {
 const [query, setQuery] = useState("");
 const [sortMode, setSortMode] = useState<EventSortMode>("soonest");
+const visibleEvents = useMemo(
+  () => filterAndSortEvents(events, query, sortMode),
+  [events, query, sortMode],
+);
+
+return (
+  <section className="space-y-5">
+    <div className="rounded-[22px] border border-brand-mist bg-white p-5 shadow-soft">
+      <div className="grid gap-4 md:grid-cols-[1fr_210px]">
+        <label className="relative block">
+          <span className="sr-only">Search campus events</span>
+
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-green" />
+
+          <Input
+            className="pl-10"
+            placeholder="Search by event, club, or location..."
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
