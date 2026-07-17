@@ -49,45 +49,29 @@ aside={
 <div className="rounded-[22px] border border-brand-mist bg-white p-5 shadow-lift">
 
               <div className="flex items-center gap-3">
-                <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-amber-50 text-amber-600">
-                  <CalendarDays className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="font-display text-base font-semibold text-brand-ink">
-                    {events.length} upcoming events
-                  </p>
-                  <p className="text-sm text-brand-muted">Browse now, sign in when you are ready to RSVP.</p>
-                </div>
+              <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-amber-50 text-amber-600">
+              <CalendarDays className="h-6 w-6" />
               </div>
-            </div>
-          }
-        />
-        <section className="rounded-[22px] border border-brand-mist bg-white p-5 shadow-soft">
-          <p className="mb-3 text-sm font-semibold text-brand-green">Filter by interest</p>
-          <div className="flex flex-wrap gap-2">
-            {interests.map((interest) => (
-              <Badge key={interest.id} tone="green">
-                {interest.name}
-              </Badge>
-            ))}
-          </div>
-        </section>
-        <section className="space-y-5">
-          <div>
-            <p className="text-sm font-semibold text-brand-green">Plan ahead</p>
-            <h2 className="font-display text-3xl font-semibold tracking-[-0.02em] text-brand-ink">Upcoming events</h2>
-          </div>
-          {events.length ? (
-            events.map((event) => <EventCard key={event.id} event={event} actionMode="public" />)
-          ) : (
-            <EmptyState
-              icon={<CalendarDays className="h-5 w-5" />}
-              title="No events yet"
-              description="Events will appear here after club officers add them to Firestore."
-            />
-          )}
-        </section>
-      </div>
-    </div>
-  );
-}
+              <div>
+              <p className="font-display text-base font-semibold text-brand-ink">
+              {events.length} upcoming events
+              </p>
+              <p className="text-sm text-brand-muted">
+              Browse now, sign in when you are ready to RSVP.
+              </p>
+              </div>
+              </div>
+              </div>
+              }
+              />
+              <div>
+              <p className="text-sm font-semibold text-brand-green">Plan ahead</p>
+              <h2 className="font-display text-3xl font-semibold text-brand-ink">
+              Upcoming events
+              </h2>
+              </div>
+              <EventBrowserClient events={events} />
+              </div>
+              </div>
+              );
+              }
