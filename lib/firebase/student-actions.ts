@@ -6,6 +6,7 @@ import {
   doc,
   getDocs,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
@@ -137,6 +138,17 @@ export async function getStudentNotifications(userId: string) {
   return snapshot.docs.map(normalizeNotification);
 }
 
+export async function updateNotificationStatus(
+  notificationId: string,
+  status: NotificationStatus,
+) {
+  const db = await getDb();
+  await updateDoc(doc(db, COLLECTIONS.notifications, notificationId), {
+    status,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 // Toggles club bookmark IDs inside the student's user document
 export async function toggleSavedClub(
   userId: string,
@@ -169,16 +181,47 @@ export async function toggleSavedEvent(
 export async function toggleEventRsvp(
   userId: string,
   eventId: string,
-  currentlyRsvped: boolean,
 ) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.users, userId), {
-    rsvpedEventIds: currentlyRsvped
-      ? arrayRemove(eventId)
-      : arrayUnion(eventId),
-    updatedAt: serverTimestamp(),
+  const userRef = doc(db, COLLECTIONS.users, userId);
+  const eventRef = doc(db, COLLECTIONS.events, eventId);
+
+  return runTransaction(db, async (transaction) => {
+    const [userSnapshot, eventSnapshot] = await Promise.all([
+      transaction.get(userRef),
+      transaction.get(eventRef),
+    ]);
+
+    if (!userSnapshot.exists() || !eventSnapshot.exists()) {
+      throw new Error("The student or event record was not found.");
+    }
+
+    const savedRsvps = Array.isArray(userSnapshot.data().rsvpedEventIds)
+      ? userSnapshot.data().rsvpedEventIds
+      : [];
+    const currentlySaved = savedRsvps.includes(eventId);
+    const nextRsvp = !currentlySaved;
+    const countChange = nextRsvp ? 1 : -1;
+    const currentCount = Number(eventSnapshot.data().rsvpCount ?? 0);
+
+    transaction.update(userRef, {
+      rsvpedEventIds: nextRsvp
+        ? arrayUnion(eventId)
+        : arrayRemove(eventId),
+      rsvpMutation: {
+        eventId,
+        countChange,
+      },
+      updatedAt: serverTimestamp(),
+    });
+
+    transaction.update(eventRef, {
+      rsvpCount: Math.max(0, currentCount + countChange),
+      updatedAt: serverTimestamp(),
+    });
+
+    return nextRsvp;
   });
-  return !currentlyRsvped;
 }
 
 // Creates a join request in Firestore and triggers an immediate feedback notification
@@ -186,6 +229,17 @@ export async function createJoinRequest(
   input: JoinRequestInput,
 ): Promise<JoinRequest> {
   const db = await getDb();
+
+  const existingRequests = await getStudentJoinRequests(input.userId);
+  const activeRequest = existingRequests.find(
+    (request) =>
+      request.clubId === input.clubId &&
+      (request.status === "pending" || request.status === "approved"),
+  );
+  if (activeRequest) {
+    throw new Error("An active join request already exists for this club.");
+  }
+
   const request = {
     clubId: input.clubId,
     clubName: input.clubName ?? "",
@@ -194,32 +248,77 @@ export async function createJoinRequest(
     message: input.message,
     status: "pending" as RequestStatus,
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
-  const documentReference = await addDoc(
-    collection(db, COLLECTIONS.joinRequests),
-    request,
-  );
 
-  // Automatically generate a notification alerting the student that their request is pending
-  await addDoc(collection(db, COLLECTIONS.notifications), {
-    userId: input.userId,
-    clubId: input.clubId,
-    title: "Join request sent",
-    body: "Your membership request was sent to the club officers.",
-    type: "joinRequest",
-    status: "unread",
-    relatedHref: "/dashboard",
-    createdAt: serverTimestamp(),
+  const requestRef = doc(
+    db,
+    COLLECTIONS.joinRequests,
+    `${input.userId}_${input.clubId}`,
+  );
+  const notificationRef = doc(collection(db, COLLECTIONS.notifications));
+
+  await runTransaction(db, async (transaction) => {
+    const currentRequest = await transaction.get(requestRef);
+    if (
+      currentRequest.exists() &&
+      (currentRequest.data().status === "pending" ||
+        currentRequest.data().status === "approved")
+    ) {
+      throw new Error("An active join request already exists for this club.");
+    }
+
+    if (currentRequest.exists()) {
+      if (currentRequest.data().status !== "rejected") {
+        throw new Error("This join request cannot be resubmitted.");
+      }
+      transaction.update(requestRef, {
+        message: request.message,
+        status: request.status,
+        createdAt: request.createdAt,
+        updatedAt: request.updatedAt,
+      });
+    } else {
+      transaction.set(requestRef, request);
+    }
+
+    transaction.set(notificationRef, {
+      userId: input.userId,
+      clubId: input.clubId,
+      title: "Join request sent",
+      body: "Your membership request was sent to the club officers.",
+      type: "joinRequest",
+      status: "unread",
+      relatedHref: "/dashboard",
+      createdAt: serverTimestamp(),
+    });
   });
 
   return {
-    id: documentReference.id,
+    id: requestRef.id,
     clubId: request.clubId,
     studentId: request.studentId,
     message: request.message,
     status: request.status,
     createdAt: "Just now",
   } satisfies JoinRequest;
+}
+
+export async function cancelJoinRequest(userId: string, requestId: string) {
+  const db = await getDb();
+  const requestRef = doc(db, COLLECTIONS.joinRequests, requestId);
+
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(requestRef);
+    if (!snapshot.exists()) {
+      throw new Error("Join request not found.");
+    }
+    const request = snapshot.data();
+    if (request.studentId !== userId || request.status !== "pending") {
+      throw new Error("Only your pending request can be cancelled.");
+    }
+    transaction.delete(requestRef);
+  });
 }
 
 // Creates a student inquiry thread and triggers an immediate feedback notification
@@ -238,6 +337,7 @@ export async function createClubInquiry(
     createdAt: serverTimestamp(),
     replies: [],
   };
+
   const documentReference = await addDoc(
     collection(db, COLLECTIONS.inquiries),
     inquiry,

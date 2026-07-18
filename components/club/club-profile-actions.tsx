@@ -1,10 +1,12 @@
 "use client";
+
 import { useEffect, useState, type FormEvent } from "react";
-import { Bookmark, MessageSquare, PlusCircle } from "lucide-react";
+import { Bookmark, MessageSquare, PlusCircle, XCircle } from "lucide-react";
 import { StatusBadge } from "@/components/common/status-badge";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
+  cancelJoinRequest,
   createClubInquiry,
   createJoinRequest,
   getStudentJoinRequests,
@@ -21,6 +23,7 @@ export function ClubProfileActions({ club }: ClubProfileActionsProps) {
   const [status, setStatus] = useState<Club["membershipStatus"]>(
     club.membershipStatus ?? "notJoined",
   );
+  const [joinRequestId, setJoinRequestId] = useState<string | null>(null);
   const [messageVisible, setMessageVisible] = useState(false);
   const [joinMessage, setJoinMessage] = useState(
     `I would like to join ${club.name}.`,
@@ -44,7 +47,10 @@ export function ClubProfileActions({ club }: ClubProfileActionsProps) {
         const existingRequest = requests.find(
           (request) => request.clubId === club.id,
         );
-        if (existingRequest) setStatus(existingRequest.status);
+        if (existingRequest) {
+          setStatus(existingRequest.status);
+          setJoinRequestId(existingRequest.id);
+        }
       })
       .catch(() => undefined);
   }, [club.id, user]);
@@ -65,9 +71,26 @@ export function ClubProfileActions({ club }: ClubProfileActionsProps) {
         message: joinMessage.trim() || `I would like to join ${club.name}.`,
       });
       setStatus(request.status);
+      setJoinRequestId(request.id);
       setFeedback("Join request sent to the club officers.");
     } catch {
       setFeedback("Unable to send join request right now.");
+    } finally {
+      setIsJoining(false);
+    }
+  }
+
+  async function handleCancelRequest() {
+    if (!user || !joinRequestId) return;
+    setIsJoining(true);
+    setFeedback("");
+    try {
+      await cancelJoinRequest(user.uid, joinRequestId);
+      setStatus("notJoined");
+      setJoinRequestId(null);
+      setFeedback("Join request cancelled.");
+    } catch {
+      setFeedback("Unable to cancel the join request right now.");
     } finally {
       setIsJoining(false);
     }
@@ -142,17 +165,21 @@ export function ClubProfileActions({ club }: ClubProfileActionsProps) {
       </label>
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
         <Button
-          disabled={status === "approved" || status === "pending" || isJoining}
-          onClick={handleJoinRequest}
+          disabled={status === "approved" || isJoining}
+          onClick={status === "pending" ? handleCancelRequest : handleJoinRequest}
         >
-          <PlusCircle className="h-4 w-4" />
+          {status === "pending" ? (
+            <XCircle className="h-4 w-4" />
+          ) : (
+            <PlusCircle className="h-4 w-4" />
+          )}
           {isJoining
             ? "Sending..."
             : status === "approved"
-            ? "Already joined"
-            : status === "pending"
-            ? "Request pending"
-            : "Request to join"}
+              ? "Already joined"
+              : status === "pending"
+                ? "Cancel request"
+                : "Request to join"}
         </Button>
         <Button variant="outline" onClick={handleSaveClub} disabled={isSaving}>
           <Bookmark className="h-4 w-4" />
