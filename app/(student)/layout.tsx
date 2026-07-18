@@ -1,7 +1,7 @@
 import { RoleGate } from "@/components/auth/role-gate";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 
-// Defines the primary navigation links for the student workspace sidebar
+// Includes the new Account Settings route in the student navigation sidebar
 const studentNav = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Explore", href: "/clubs" },
@@ -10,6 +10,7 @@ const studentNav = [
   { label: "Notifications", href: "/notifications" },
   { label: "Report", href: "/report" },
   { label: "Profile", href: "/profile" },
+  { label: "Account", href: "/account" },
 ];
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
