@@ -3,8 +3,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { LogOut, Menu, X } from "lucide-react";
-import { RamLinkLogo } from "@/components/brand/ramlink-logo";
 import { useAuth } from "@/components/auth/auth-provider";
+import { RamLinkLogo } from "@/components/brand/ramlink-logo";
+import { cn } from "@/lib/utils";
 import { logoutCurrentUser } from "@/lib/firebase/auth";
 
 export type WorkspaceNavItem = {
