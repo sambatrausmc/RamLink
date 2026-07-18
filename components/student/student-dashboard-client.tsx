@@ -132,7 +132,7 @@ export function StudentDashboardClient({
         action={
           <Link
             href="/clubs"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-[11px] bg-brand-forest px-4 text-sm font-semibold leading-none textwhite shadow-[0_6px_16px_rgba(11,93,59,0.18)] transition hover:-translate-y-0.5 hover:bg-brand-forestDark"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-[11px] bg-brand-forest px-4 text-sm font-semibold leading-none text-white shadow-[0_6px_16px_rgba(11,93,59,0.18)] transition hover:-translate-y-0.5 hover:bg-brand-forestDark"
           >
             <Sparkles className="h-4 w-4" />
             Browse clubs

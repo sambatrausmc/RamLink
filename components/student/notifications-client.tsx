@@ -26,7 +26,7 @@ export function NotificationsClient({
 }: NotificationsClientProps) {
   const { loading: authLoading, user } = useAuth();
   const [notifications, setNotifications] = useState(fallbackNotifications);
-  const [filter, setFilter] = useState<NotificationFilter>;
+  const [filter, setFilter] = useState<NotificationFilter>("all");
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
     "loading",
   );
@@ -97,6 +97,7 @@ export function NotificationsClient({
             <Button
               size="sm"
               variant={filter === "all" ? "secondary" : "outline"}
+              aria-pressed={filter === "all"}
               onClick={() => setFilter("all")}
             >
               All
@@ -104,6 +105,7 @@ export function NotificationsClient({
             <Button
               size="sm"
               variant={filter === "unread" ? "secondary" : "outline"}
+              aria-pressed={filter === "unread"}
               onClick={() => setFilter("unread")}
             >
               Unread
