@@ -2,10 +2,13 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays } from "lucide-react";
 import { PageHero } from "@/components/common/page-hero";
 import { EventBrowserClient } from "@/components/public/event-browser-client";
-import { getEvents } from "@/lib/firebase/public-data";
+import { getClubs, getEvents } from "@/lib/firebase/public-data";
+
 export const dynamic = "force-dynamic";
+
 export default async function EventsPage() {
-  const events = await getEvents();
+  const [events, clubs] = await Promise.all([getEvents(), getClubs()]);
+
   return (
     <div className="bg-brand-surface/70">
       <div className="mx-auto w-full max-w-[1180px] space-y-10 px-5 py-12 md:px-6 md:py-16">
@@ -69,7 +72,7 @@ hover:border-brand-greenLight hover:bg-brand-surface
             Upcoming events
           </h2>
         </div>
-        <EventBrowserClient events={events} />
+        <EventBrowserClient events={events} clubs={clubs} />
       </div>
     </div>
   );
