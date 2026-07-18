@@ -13,12 +13,13 @@ const mocks = vi.hoisted(() => ({
   loginWithEmailAndPassword: vi.fn(),
   logoutCurrentUser: vi.fn(),
   push: vi.fn(),
+  refresh: vi.fn(),
   resetPasswordForEmail: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
-  useRouter: () => ({ push: mocks.push }),
+  useRouter: () => ({ push: mocks.push, refresh: mocks.refresh }),
 }));
 
 vi.mock("@/components/auth/auth-provider", () => ({
@@ -82,11 +83,15 @@ describe("account actions", () => {
       </WorkspaceShell>,
     );
 
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open account menu" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
 
     await waitFor(() => {
       expect(mocks.logoutCurrentUser).toHaveBeenCalledOnce();
       expect(mocks.push).toHaveBeenCalledWith("/login");
+      expect(mocks.refresh).toHaveBeenCalledOnce();
     });
   });
 });
