@@ -73,9 +73,7 @@ export function LoginForm() {
       </label>
 
       <label className="block">
-        <span className="text-sm font-semibold text-brand-ink">
-          Password
-        </span>
+        <span className="text-sm font-semibold text-brand-ink">Password</span>
 
         <Input
           className="mt-2"
