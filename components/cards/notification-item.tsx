@@ -4,14 +4,25 @@ import { Badge } from "@/components/ui/badge";
 import type { NotificationItem as NotificationItemType } from "@/lib/types";
 
 type NotificationItemProps = {
-  notification: NotificationItemType;
+notification: NotificationItemType;
+onOpen?: (notificationId: string) => void;
 };
-export function NotificationItem({ notification }: NotificationItemProps) {
-  return (
-    <Link
-      href={notification.relatedHref}
-      className="flex gap-3 rounded-[18px] border border-brand-mist bg-white p-4 shadow-[0_1px_2px_rgba(7,61,39,0.04),0_10px_28px_rgba(7,61,39,0.06)] transition duration-200 hover:-translate-y-1 hover:border-brand-greenLight hover:shadow-lift"
-    >
+export function NotificationItem({
+notification,
+onOpen,
+}: NotificationItemProps) {
+return (
+  <Link
+  href={notification.relatedHref}
+  onClick={() => onOpen?.(notification.id)}
+  className={`
+  flex gap-3 rounded-[18px] border border-brand-mist bg-white p-4
+  shadow-[0_1px_2px_rgba(7,61,39,0.04),0_10px_28px_rgba(7,61,39,0.06)]
+  transition duration-200 hover:-translate-y-1 hover:border-brand-greenLight
+  hover:shadow-lift
+  `}
+  >
+
       <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-brand-mist text-brand-forest">
         <Bell className="h-5 w-5" />
       </div>
