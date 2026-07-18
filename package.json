@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium",
     "test:rules": "npx --yes firebase-tools@15.23.0 emulators:exec \"vitest --run tests/firestore-rules.test.ts\" --only firestore --project demo-ramlink",
     "seed:firebase": "node --env-file=.env.local scripts/seed-firestore.mjs"
   },
