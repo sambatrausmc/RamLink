@@ -96,7 +96,9 @@ const initials =
           <div className="border-t border-brand-mist bg-white px-5 py-3 lg:hidden">
             <div className="mx-auto grid w-full max-w-[1180px] gap-1">
               {navItems.map((item) => {
-                const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+                const active =
+                pathname === item.href ||
+                (item.href !== "/" && pathname.startsWith(`${item.href}/`));
                 return (
                   <Link
                     key={item.href}
