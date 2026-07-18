@@ -7,10 +7,7 @@ import { getClubs, getInterests } from "@/lib/firebase/public-data";
 export const dynamic = "force-dynamic";
 
 export default async function ClubsPage() {
-  const [clubs, interests] = await Promise.all([
-    getClubs(),
-    getInterests(),
-  ]);
+  const [clubs, interests] = await Promise.all([getClubs(), getInterests()]);
 
   return (
     // Main page wrapper
@@ -80,9 +77,7 @@ export default async function ClubsPage() {
         <section>
           <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-brand-green">
-                Explore
-              </p>
+              <p className="text-sm font-semibold text-brand-green">Explore</p>
               <h2 className="font-display text-3xl font-semibold text-brand-ink">
                 All clubs
               </h2>
