@@ -5,8 +5,18 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
-import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from "firebase/firestore";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const emulatorAddress = process.env.FIRESTORE_EMULATOR_HOST;
 const [host = "127.0.0.1", portText = "8080"] =
@@ -43,6 +53,16 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         displayName: "Officer One",
         joinedClubIds: [],
         managedClubIds: ["club-1"],
+      });
+      await setDoc(doc(database, "users/member-1"), {
+        role: "student",
+        displayName: "Managed Club Member",
+        joinedClubIds: ["club-1"],
+      });
+      await setDoc(doc(database, "users/unrelated-1"), {
+        role: "student",
+        displayName: "Unrelated Student",
+        joinedClubIds: ["club-2"],
       });
       await setDoc(doc(database, "joinRequests/request-1"), {
         clubId: "club-1",
@@ -100,6 +120,21 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         updatedAt: serverTimestamp(),
       }),
     );
+  });
+
+  it("limits officers to users in their managed clubs", async () => {
+    const officerDb = testEnvironment
+      .authenticatedContext("officer-1")
+      .firestore();
+    const memberQuery = query(
+      collection(officerDb, "users"),
+      where("joinedClubIds", "array-contains", "club-1"),
+    );
+
+    const snapshot = await assertSucceeds(getDocs(memberQuery));
+    expect(snapshot.docs.map((member) => member.id)).toEqual(["member-1"]);
+    await assertFails(getDoc(doc(officerDb, "users/unrelated-1")));
+    await assertFails(getDocs(collection(officerDb, "users")));
   });
 
   it("allows inquiry replies without allowing inquiry reassignment", async () => {

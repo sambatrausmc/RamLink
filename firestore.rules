@@ -56,6 +56,12 @@ service cloud.firestore {
         removedClubs.hasOnly(userDoc().data.managedClubIds);
     }
 
+    // Officers may only view students who belong to one of their managed clubs.
+    function officerCanReadManagedMember() {
+      return isOfficer() &&
+        resource.data.joinedClubIds.hasAny(userDoc().data.managedClubIds);
+    }
+
     // Students may edit their profile and activity fields, but not roles or memberships.
     function selfUpdatesAllowedProfileFields(userId) {
       let changedFields = request.resource.data.diff(resource.data).affectedKeys();
@@ -104,7 +110,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow create: if isSelf(userId) && request.resource.data.role == "student";
-      allow read: if isSelf(userId) || isAdmin() || isOfficer();
+      allow read: if isSelf(userId) || isAdmin() || officerCanReadManagedMember();
       allow update: if
         selfUpdatesAllowedProfileFields(userId) ||
         isAdmin() ||
