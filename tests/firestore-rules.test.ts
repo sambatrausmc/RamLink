@@ -61,6 +61,13 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         managedClubIds: ["club-1"],
       });
 
+      await setDoc(doc(database, "users/officer-2"), {
+        role: "clubOfficer",
+        displayName: "Officer Two",
+        joinedClubIds: [],
+        managedClubIds: ["club-2"],
+      });
+
       await setDoc(doc(database, "users/member-1"), {
         role: "student",
         displayName: "Managed Club Member",
@@ -97,6 +104,14 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         replies: [],
       });
 
+      await setDoc(doc(database, "notifications/notification-1"), {
+        userId: "student-1",
+        title: "Request update",
+        body: "Your request has been reviewed.",
+        type: "join_request",
+        status: "unread",
+      });
+
       await setDoc(doc(database, "events/event-1"), {
         clubId: "club-1",
         title: "Campus Event",
@@ -107,6 +122,20 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         clubId: "club-1",
         title: "Second Campus Event",
         rsvpCount: 0,
+      });
+
+      await setDoc(doc(database, "announcements/announcement-1"), {
+        clubId: "club-1",
+        title: "Meeting reminder",
+        body: "Meet in the student center.",
+      });
+
+      await setDoc(doc(database, "resources/resource-1"), {
+        clubId: "club-1",
+        title: "Club handbook",
+        description: "Officer reference material.",
+        type: "link",
+        url: "https://example.com/handbook",
       });
     });
   });
@@ -336,6 +365,75 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         clubId: "club-2",
         updatedAt: serverTimestamp(),
       }),
+    );
+  });
+
+  it("limits notification updates to the owner and valid statuses", async () => {
+    const studentDb = testEnvironment
+      .authenticatedContext("student-1")
+      .firestore();
+    const notificationRef = doc(
+      studentDb,
+      "notifications/notification-1",
+    );
+
+    await assertSucceeds(
+      updateDoc(notificationRef, {
+        status: "read",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+
+    await assertFails(
+      updateDoc(notificationRef, {
+        status: "archived",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+
+    const unrelatedDb = testEnvironment
+      .authenticatedContext("unrelated-1")
+      .firestore();
+    await assertFails(
+      updateDoc(doc(unrelatedDb, "notifications/notification-1"), {
+        status: "unread",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+  });
+
+  it("limits content management to officers of the matching club", async () => {
+    const officerDb = testEnvironment
+      .authenticatedContext("officer-1")
+      .firestore();
+    const otherOfficerDb = testEnvironment
+      .authenticatedContext("officer-2")
+      .firestore();
+
+    await assertSucceeds(
+      updateDoc(doc(officerDb, "events/event-1"), {
+        title: "Updated Campus Event",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(otherOfficerDb, "events/event-1"), {
+        title: "Unauthorized Update",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+
+    await assertSucceeds(
+      updateDoc(doc(officerDb, "announcements/announcement-1"), {
+        body: "Meet in the library instead.",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      deleteDoc(doc(otherOfficerDb, "announcements/announcement-1")),
+    );
+    await assertSucceeds(
+      deleteDoc(doc(officerDb, "resources/resource-1")),
     );
   });
 });
