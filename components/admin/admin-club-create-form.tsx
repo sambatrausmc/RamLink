@@ -39,8 +39,12 @@ export function AdminClubCreateForm({ onCreated }: { onCreated: () => void }) {
       setContactEmail("");
       setFeedback("Pending club record created.");
       onCreated();
-    } catch {
-      setFeedback("Unable to create this club record.");
+    } catch (error) {
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : "Unable to create this club record.",
+      );
     } finally {
       setSaving(false);
     }
