@@ -23,19 +23,25 @@ return (
   `}
   >
 
-      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-brand-mist text-brand-forest">
-        <Bell className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="font-display font-semibold text-brand-ink">{notification.title}</h2>
-          <Badge tone={notification.status === "unread" ? "gold" : "slate"}>
-            {notification.status}
-          </Badge>
+   <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-brand-mist text-brand-forest">
+      <Bell className="h-5 w-5" />
+    </div>
+    <div className="min-w-0 flex-1">
+       <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-display font-semibold text-brand-ink">
+               {notification.title}
+            </h2>
+            <Badge tone={notification.status === "unread" ? "gold" : "slate"}>
+                {notification.status}
+               </Badge>
+             </div>
+            <p className="mt-1 text-sm leading-6 text-brand-muted">
+                {notification.body}
+               </p>
+                <p className="mt-2 text-xs font-medium text-brand-muted/70">
+                {notification.createdAt}
+             </p>
         </div>
-        <p className="mt-1 text-sm leading-6 text-brand-muted">{notification.body}</p>
-        <p className="mt-2 text-xs font-medium text-brand-muted/70">{notification.createdAt}</p>
-      </div>
     </Link>
-  );
+   );
 }
