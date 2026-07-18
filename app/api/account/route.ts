@@ -16,9 +16,28 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
+  const token = authorization.slice("Bearer ".length);
+  let decodedToken;
+
   try {
-    const token = authorization.slice("Bearer ".length);
-    const { uid } = await getAdminAuth().verifyIdToken(token);
+    decodedToken = await getAdminAuth().verifyIdToken(token);
+  } catch {
+    return NextResponse.json({ error: "Invalid authentication token." }, { status: 401 });
+  }
+
+  const currentTime = Math.floor(Date.now() / 1000);
+  if (
+    typeof decodedToken.auth_time !== "number" ||
+    currentTime - decodedToken.auth_time > 5 * 60
+  ) {
+    return NextResponse.json(
+      { error: "Recent authentication is required." },
+      { status: 409 },
+    );
+  }
+
+  try {
+    const { uid } = decodedToken;
     const db = getAdminDb();
 
     // Query all related records across collections simultaneously

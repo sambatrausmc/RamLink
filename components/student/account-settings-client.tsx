@@ -15,6 +15,7 @@ import {
 export function AccountSettingsClient() {
   const router = useRouter();
   const { user } = useAuth();
+  const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [feedback, setFeedback] = useState("");
   const [working, setWorking] = useState(false);
@@ -33,16 +34,20 @@ export function AccountSettingsClient() {
     }
   }
 
-  // Executes permanent account deletion when user types "DELETE"
+  // Reauthenticates the user before requesting permanent account deletion
   async function deleteAccount() {
-    if (confirmation !== "DELETE") return;
+    if (!password || confirmation !== "DELETE") return;
     setWorking(true);
     setFeedback("");
     try {
-      await deleteCurrentAccount();
+      await deleteCurrentAccount(password);
       router.push("/homepage");
-    } catch {
-      setFeedback("Unable to delete your account. Sign in again and retry.");
+    } catch (error) {
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : "Unable to delete your account. Sign in again and retry.",
+      );
       setWorking(false);
     }
   }
@@ -77,11 +82,18 @@ export function AccountSettingsClient() {
         </CardHeader>
         <CardContent>
           <p className="text-sm leading-6 text-brand-muted">
-            This permanently removes your login and RamLink profile data. Type DELETE to confirm.
+            This permanently removes your login and RamLink profile data. Enter your current password and type DELETE to confirm.
           </p>
-          <div className="mt-4 flex max-w-md flex-col gap-3 sm:flex-row">
+          <div className="mt-4 flex max-w-md flex-col gap-3">
+            <Input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Current password"
+              aria-label="Current password"
+            />
             <Input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} placeholder="Type DELETE" />
-            <Button variant="danger" disabled={confirmation !== "DELETE" || working} onClick={deleteAccount}>
+            <Button variant="danger" disabled={!password || confirmation !== "DELETE" || working} onClick={deleteAccount}>
               <Trash2 className="h-4 w-4" /> Delete account
             </Button>
           </div>
