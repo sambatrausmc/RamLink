@@ -336,8 +336,14 @@ export async function getStudents() {
 }
 
 export async function getMembersForClub(clubId: string) {
-  const students = await getStudents();
-  return students.filter((student) => student.joinedClubIds.includes(clubId));
+  const db = await getDb();
+  const snapshot = await getDocs(
+    query(
+      collection(db, COLLECTIONS.users),
+      where("joinedClubIds", "array-contains", clubId),
+    ),
+  );
+  return snapshot.docs.map(normalizeStudent);
 }
 
 export async function getNotificationsForUser(userId: string) {

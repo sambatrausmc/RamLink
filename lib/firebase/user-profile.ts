@@ -29,14 +29,19 @@ function readString(value: unknown, fallback = "") {
 }
 
 function readStringArray(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 }
 
 function readRole(value: unknown): UserRole {
   return value === "clubOfficer" || value === "admin" ? value : "student";
 }
 
-function normalizeStudentProfile(id: string, data: DocumentData): StudentProfile {
+function normalizeStudentProfile(
+  id: string,
+  data: DocumentData,
+): StudentProfile {
   return {
     id,
     role: readRole(data.role),
@@ -49,10 +54,14 @@ function normalizeStudentProfile(id: string, data: DocumentData): StudentProfile
     savedClubIds: readStringArray(data.savedClubIds),
     savedEventIds: readStringArray(data.savedEventIds),
     rsvpedEventIds: readStringArray(data.rsvpedEventIds),
+    managedClubIds: readStringArray(data.managedClubIds),
   };
 }
 
-function buildNewStudentProfile(uid: string, input: CreateStudentProfileInput): StudentProfile {
+function buildNewStudentProfile(
+  uid: string,
+  input: CreateStudentProfileInput,
+): StudentProfile {
   return {
     id: uid,
     role: "student",
@@ -65,10 +74,14 @@ function buildNewStudentProfile(uid: string, input: CreateStudentProfileInput): 
     savedClubIds: [],
     savedEventIds: [],
     rsvpedEventIds: [],
+    managedClubIds: [],
   };
 }
 
-export async function createStudentProfile(uid: string, input: CreateStudentProfileInput) {
+export async function createStudentProfile(
+  uid: string,
+  input: CreateStudentProfileInput,
+) {
   // The user document ID matches the Firebase Auth UID so pages can load the right student.
   const db = await getDb();
   await setDoc(doc(db, COLLECTIONS.users, uid), {
@@ -87,7 +100,10 @@ export async function getStudentProfile(uid: string) {
   return normalizeStudentProfile(snapshot.id, snapshot.data());
 }
 
-export async function updateStudentProfile(uid: string, input: UpdateStudentProfileInput) {
+export async function updateStudentProfile(
+  uid: string,
+  input: UpdateStudentProfileInput,
+) {
   const db = await getDb();
   await updateDoc(doc(db, COLLECTIONS.users, uid), {
     ...input,

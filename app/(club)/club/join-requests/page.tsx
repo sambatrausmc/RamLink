@@ -1,29 +1,5 @@
-export const dynamic = "force-dynamic";
-import { JoinRequestRow } from "@/components/cards/join-request-row";
-import { PageHeader } from "@/components/common/page-header";
-import { Badge } from "@/components/ui/badge";
-import { DEFAULT_MANAGED_CLUB_ID, getJoinRequestsForClub } from "@/lib/firebase/public-data";
+import { ClubJoinRequestsClient } from "@/components/club/club-join-requests-client";
 
-export default async function JoinRequestsPage() {
-  const joinRequests = await getJoinRequestsForClub(DEFAULT_MANAGED_CLUB_ID);
-  
-  return (
-    <div className="space-y-8">
-      <PageHeader
-        eyebrow="Membership"
-        title="Review join requests"
-        description="Approve or reject student requests for the managed club."
-      />
-      <div className="flex flex-wrap gap-2">
-        <Badge tone="gold">Pending</Badge>
-        <Badge tone="green">Approved</Badge>
-        <Badge tone="red">Rejected</Badge>
-      </div>
-      <section className="space-y-4">
-        {joinRequests.map((request) => (
-          <JoinRequestRow key={request.id} request={request} />
-        ))}
-      </section>
-    </div>
-  );
+export default function ClubJoinRequestsPage() {
+  return <ClubJoinRequestsClient />;
 }
