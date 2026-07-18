@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { RamLinkLogo } from "@/components/brand/ramlink-logo";
 import { logoutCurrentUser } from "@/lib/firebase/auth";
 import { cn } from "@/lib/utils";
-import { logoutCurrentUser } from "@/lib/firebase/auth";
+
 export type WorkspaceNavItem = {
   label: string;
   href: string;
@@ -17,6 +17,19 @@ type WorkspaceShellProps = {
   navItems: WorkspaceNavItem[];
   children: React.ReactNode;
 };
+
+export function getAccountInitials(displayName: string) {
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((namePart) => namePart[0])
+    .join("")
+    .toUpperCase();
+
+  return initials || "RL";
+}
+
 export function WorkspaceShell({
   roleLabel,
   navItems,
@@ -24,18 +37,15 @@ export function WorkspaceShell({
 }: WorkspaceShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const initials =
-    profile?.displayName
-      .split(" ")
-      .filter(Boolean)
-
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "RL";
+  const displayName =
+    profile?.displayName ||
+    user?.displayName ||
+    user?.email ||
+    "RamLink account";
+  const initials = getAccountInitials(displayName);
 
   async function handleSignOut() {
     setSigningOut(true);
