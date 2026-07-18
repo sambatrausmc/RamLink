@@ -2,11 +2,12 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, UserRound, X } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { RamLinkLogo } from "@/components/brand/ramlink-logo";
-import { cn } from "@/lib/utils";
 import { logoutCurrentUser } from "@/lib/firebase/auth";
+import { cn } from "@/lib/utils";
+
 export type WorkspaceNavItem = {
   label: string;
   href: string;
@@ -16,6 +17,19 @@ type WorkspaceShellProps = {
   navItems: WorkspaceNavItem[];
   children: React.ReactNode;
 };
+
+export function getAccountInitials(displayName: string) {
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((namePart) => namePart[0])
+    .join("")
+    .toUpperCase();
+
+  return initials || "RL";
+}
+
 export function WorkspaceShell({
   roleLabel,
   navItems,
@@ -23,25 +37,32 @@ export function WorkspaceShell({
 }: WorkspaceShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const initials =
-    profile?.displayName
-      .split(" ")
-      .filter(Boolean)
-
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "RL";
+  const displayName =
+    profile?.displayName ||
+    user?.displayName ||
+    user?.email ||
+    "RamLink account";
+  const initials = getAccountInitials(displayName);
+  const profileHref =
+    profile?.role === "clubOfficer" || roleLabel === "Club Officer Mode"
+      ? "/club/profile"
+      : profile?.role === "admin" || roleLabel === "Admin Mode"
+        ? "/admin/users"
+        : "/profile";
 
   async function handleSignOut() {
     setSigningOut(true);
 
     try {
       await logoutCurrentUser();
+      setAccountOpen(false);
+      setMenuOpen(false);
       router.push("/login");
+      router.refresh();
     } finally {
       setSigningOut(false);
     }
@@ -87,7 +108,7 @@ export function WorkspaceShell({
               );
             })}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="relative flex items-center gap-2">
             <Link
               href="/homepage"
               className={`hidden rounded-lg px-3 py-2 text-sm font-semibold text-brand-muted transition hover:bg-brand-surface hover:text-brand-forest md:inline-flex`}
@@ -95,21 +116,42 @@ export function WorkspaceShell({
               Public Site
             </Link>
 
-            <span
-              className={`hidden h-9 w-9 place-items-center rounded-full bg-brand-forest text-sm font-bold text-white md:grid`}
-            >
-              {initials}
-            </span>
-
             <button
               type="button"
-              className={`hidden h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-brand-muted hover:bg-brand-surface md:inline-flex`}
-              onClick={handleSignOut}
-              disabled={signingOut}
+              className="hidden h-9 w-9 place-items-center rounded-full bg-brand-forest text-sm font-bold text-white md:grid"
+              title={displayName}
+              aria-label="Open account menu"
+              aria-expanded={accountOpen}
+              onClick={() => setAccountOpen((value) => !value)}
             >
-              <LogOut className="h-4 w-4" />
-              {signingOut ? "Signing out..." : "Sign out"}
+              {initials}
             </button>
+            {accountOpen ? (
+              <div className="absolute right-0 top-12 z-50 hidden w-60 rounded-[12px] border border-brand-mist bg-white p-2 shadow-lift md:block">
+                <div className="border-b border-brand-surface px-3 py-2">
+                  <p className="truncate text-sm font-semibold text-brand-ink">
+                    {displayName}
+                  </p>
+                  <p className="text-xs text-brand-muted">{roleLabel}</p>
+                </div>
+                <Link
+                  href={profileHref}
+                  className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-brand-muted hover:bg-brand-surface hover:text-brand-forest"
+                  onClick={() => setAccountOpen(false)}
+                >
+                  <UserRound className="h-4 w-4" /> Profile
+                </Link>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-brand-muted hover:bg-brand-surface hover:text-brand-forest"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                >
+                  <LogOut className="h-4 w-4" />
+                  {signingOut ? "Signing out..." : "Sign out"}
+                </button>
+              </div>
+            ) : null}
 
             <button
               type="button"
@@ -160,15 +202,27 @@ export function WorkspaceShell({
                 Public Site
               </Link>
 
-              <button
-                type="button"
-                className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-brand-muted hover:bg-brand-surface`}
-                onClick={handleSignOut}
-                disabled={signingOut}
-              >
-                <LogOut className="h-4 w-4" />
-                {signingOut ? "Signing out..." : "Sign out"}
-              </button>
+              <div className="mt-2 border-t border-brand-mist pt-2">
+                <p className="px-3 py-1 text-xs font-semibold text-brand-muted">
+                  {displayName}
+                </p>
+                <Link
+                  href={profileHref}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-brand-muted hover:bg-brand-surface hover:text-brand-forest"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <UserRound className="h-4 w-4" /> Profile
+                </Link>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-brand-muted hover:bg-brand-surface hover:text-brand-forest"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                >
+                  <LogOut className="h-4 w-4" />
+                  {signingOut ? "Signing out..." : "Sign out"}
+                </button>
+              </div>
             </div>
           </div>
         ) : null}

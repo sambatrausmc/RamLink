@@ -13,12 +13,13 @@ const mocks = vi.hoisted(() => ({
   loginWithEmailAndPassword: vi.fn(),
   logoutCurrentUser: vi.fn(),
   push: vi.fn(),
+  refresh: vi.fn(),
   resetPasswordForEmail: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
-  useRouter: () => ({ push: mocks.push }),
+  useRouter: () => ({ push: mocks.push, refresh: mocks.refresh }),
 }));
 
 vi.mock("@/components/auth/auth-provider", () => ({
@@ -82,11 +83,36 @@ describe("account actions", () => {
       </WorkspaceShell>,
     );
 
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open account menu" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
 
     await waitFor(() => {
       expect(mocks.logoutCurrentUser).toHaveBeenCalledOnce();
       expect(mocks.push).toHaveBeenCalledWith("/login");
+      expect(mocks.refresh).toHaveBeenCalledOnce();
     });
+  });
+
+  it("opens the student account menu with profile access", () => {
+    render(
+      <WorkspaceShell
+        roleLabel="Student Mode"
+        navItems={[{ label: "Dashboard", href: "/dashboard" }]}
+      >
+        <p>Student workspace</p>
+      </WorkspaceShell>,
+    );
+
+    const accountButton = screen.getByRole("button", {
+      name: "Open account menu",
+    });
+    expect(accountButton.textContent).toBe("JE");
+    fireEvent.click(accountButton);
+
+    expect(screen.getByRole("link", { name: "Profile" }).getAttribute("href"))
+      .toBe("/profile");
+    expect(screen.getAllByText("Student Mode")).toHaveLength(2);
   });
 });
