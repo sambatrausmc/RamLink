@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect } from "react";
+import { SessionAwareLink } from "@/components/auth/session-aware-content";
 import {
   ArrowRight,
   BookOpen,
@@ -33,7 +34,11 @@ const features = [
   },
 ];
 const steps = [
-  { label: "Browse", detail: "Explore clubs and events across campus.", icon: Search },
+  {
+    label: "Browse",
+    detail: "Explore clubs and events across campus.",
+    icon: Search,
+  },
   { label: "Save", detail: "Keep track of the ones you love.", icon: Bookmark },
   { label: "Join", detail: "Become part of the community.", icon: Check },
 ];
@@ -65,7 +70,9 @@ const previewClubs = [
 ];
 export default function HomePage() {
   useEffect(() => {
-    const elements = Array.from(document.querySelectorAll<HTMLElement>(".ram-reveal"));
+    const elements = Array.from(
+      document.querySelectorAll<HTMLElement>(".ram-reveal"),
+    );
     if (!("IntersectionObserver" in window)) {
       elements.forEach((element) => element.classList.add("ram-reveal-in"));
       return;
@@ -104,7 +111,8 @@ export default function HomePage() {
               Farmingdale State College
             </span>
             <h1 className="animate-fade-up mt-5 max-w-[10ch] font-display text-[clamp(40px,6vw,66px)] font-semibold leading-[1.08] tracking-[-0.02em] text-brand-ink">
-              Find your place <span className="text-brand-forest">on campus.</span>
+              Find your place{" "}
+              <span className="text-brand-forest">on campus.</span>
             </h1>
             <p className="animate-fade-up mt-5 max-w-[30ch] text-[clamp(17px,2.1vw,20px)] leading-relaxed text-brand-muted">
               Discover clubs, events, and student communities at Farmingdale.
@@ -117,12 +125,11 @@ export default function HomePage() {
                 <Search className="h-4 w-4" />
                 Explore Clubs
               </Link>
-              <Link
-                href="/register"
+              <SessionAwareLink
+                signedOutHref="/register"
+                signedOutContent="Create Account"
                 className="inline-flex items-center justify-center rounded-[11px] border border-brand-mist bg-white px-5 py-3.5 text-[15px] font-semibold leading-none text-brand-forest transition hover:-translate-y-0.5 hover:border-brand-greenLight hover:bg-brand-surface"
-              >
-                Create Account
-              </Link>
+              />
             </div>
             <div className="animate-fade-up mt-7 flex items-center gap-3 text-sm text-brand-muted">
               <div className="flex">
@@ -149,7 +156,10 @@ export default function HomePage() {
       </section>
       <section className="bg-brand-surface py-20 md:py-24">
         <div className="mx-auto w-full max-w-[1180px] px-5 md:px-6">
-          <SectionHeading kicker="Everything in one place" title="One link to campus life" />
+          <SectionHeading
+            kicker="Everything in one place"
+            title="One link to campus life"
+          />
           <div className="grid gap-5 md:grid-cols-3">
             {features.map((feature) => {
               const Icon = feature.icon;
@@ -158,13 +168,17 @@ export default function HomePage() {
                   key={feature.title}
                   className="ram-reveal rounded-[22px] border border-brand-mist bg-white p-8 transition hover:-translate-y-1.5 hover:border-transparent hover:shadow-lift"
                 >
-                  <div className={`grid h-[52px] w-[52px] place-items-center rounded-[14px] bg-gradient-to-br ${feature.gradient} text-white`}>
+                  <div
+                    className={`grid h-[52px] w-[52px] place-items-center rounded-[14px] bg-gradient-to-br ${feature.gradient} text-white`}
+                  >
                     <Icon className="h-6 w-6" />
                   </div>
                   <h3 className="mt-5 font-display text-[21px] font-semibold tracking-[-0.02em] text-brand-ink">
                     {feature.title}
                   </h3>
-                  <p className="mt-2 text-[15.5px] leading-relaxed text-brand-muted">{feature.description}</p>
+                  <p className="mt-2 text-[15.5px] leading-relaxed text-brand-muted">
+                    {feature.description}
+                  </p>
                 </article>
               );
             })}
@@ -173,7 +187,10 @@ export default function HomePage() {
       </section>
       <section className="py-20 md:py-24">
         <div className="mx-auto w-full max-w-[1180px] px-5 md:px-6">
-          <SectionHeading kicker="How it works" title="Get involved in three steps" />
+          <SectionHeading
+            kicker="How it works"
+            title="Get involved in three steps"
+          />
           <div className="relative grid gap-10 md:grid-cols-3 md:gap-6">
             <div
               aria-hidden="true"
@@ -182,7 +199,10 @@ export default function HomePage() {
             {steps.map((step, index) => {
               const Icon = step.icon;
               return (
-                <article key={step.label} className="ram-reveal relative z-10 text-center">
+                <article
+                  key={step.label}
+                  className="ram-reveal relative z-10 text-center"
+                >
                   <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-brand-mist bg-white text-brand-forest shadow-soft">
                     <Icon className="h-6 w-6" />
                   </div>
@@ -192,7 +212,9 @@ export default function HomePage() {
                   <h3 className="mt-2 font-display text-xl font-semibold tracking-[-0.02em] text-brand-ink">
                     {step.label}
                   </h3>
-                  <p className="mx-auto mt-2 max-w-[24ch] text-[15px] leading-relaxed text-brand-muted">{step.detail}</p>
+                  <p className="mx-auto mt-2 max-w-[24ch] text-[15px] leading-relaxed text-brand-muted">
+                    {step.detail}
+                  </p>
                 </article>
               );
             })}
@@ -210,7 +232,9 @@ export default function HomePage() {
               <h2 className="font-display text-[clamp(30px,4.5vw,48px)] font-semibold tracking-[-0.02em] text-white">
                 Ready to get involved?
               </h2>
-              <p className="mt-3 text-lg text-brand-mist/85">Your campus community is waiting.</p>
+              <p className="mt-3 text-lg text-brand-mist/85">
+                Your campus community is waiting.
+              </p>
               <Link
                 href="/clubs"
                 className="mt-8 inline-flex items-center justify-center gap-2 rounded-[11px] bg-brand-goldLight px-7 py-4 text-base font-semibold leading-none text-brand-forestDark shadow-[0_6px_16px_rgba(212,154,0,0.24)] transition hover:-translate-y-0.5 hover:bg-brand-gold hover:shadow-[0_10px_24px_rgba(212,154,0,0.32)]"
@@ -268,7 +292,9 @@ function HeroPreview() {
                 key={club.name}
                 className="grid grid-cols-[46px_1fr_auto] items-center gap-3 rounded-[13px] border border-brand-surface bg-white p-3 transition hover:-translate-y-0.5 hover:border-brand-mist hover:shadow-sm"
               >
-                <span className={`grid h-[46px] w-[46px] place-items-center rounded-[11px] bg-gradient-to-br ${club.gradient} text-white`}>
+                <span
+                  className={`grid h-[46px] w-[46px] place-items-center rounded-[11px] bg-gradient-to-br ${club.gradient} text-white`}
+                >
                   <Icon className="h-5 w-5" />
                 </span>
                 <div>
@@ -277,7 +303,9 @@ function HeroPreview() {
                   </h4>
                   <span className="text-xs text-brand-muted">{club.meta}</span>
                 </div>
-                <span className={`rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${club.statusTone}`}>
+                <span
+                  className={`rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${club.statusTone}`}
+                >
                   {club.status}
                 </span>
               </div>
@@ -291,7 +319,9 @@ function HeroPreview() {
 function SectionHeading({ kicker, title }: { kicker: string; title: string }) {
   return (
     <div className="ram-reveal mx-auto mb-14 max-w-2xl text-center">
-      <p className="mb-3 text-[13px] font-bold uppercase tracking-[0.08em] text-brand-gold">{kicker}</p>
+      <p className="mb-3 text-[13px] font-bold uppercase tracking-[0.08em] text-brand-gold">
+        {kicker}
+      </p>
       <h2 className="font-display text-[clamp(30px,4vw,44px)] font-semibold leading-tight tracking-[-0.02em] text-brand-ink">
         {title}
       </h2>

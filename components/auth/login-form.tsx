@@ -1,19 +1,28 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/components/auth/auth-provider";
+import { getWorkspaceHref } from "@/lib/auth-navigation";
 import { loginWithEmailAndPassword } from "@/lib/firebase/auth";
 
 export function LoginForm() {
   const router = useRouter();
+  const { loading, profile, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace(getWorkspaceHref(profile?.role));
+    }
+  }, [loading, profile?.role, router, user]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -22,7 +31,7 @@ export function LoginForm() {
 
     try {
       await loginWithEmailAndPassword({ email, password });
-      router.push("/profile");
+      router.push("/dashboard");
     } catch {
       setFeedback(
         "Unable to sign in. Check your email and password, then try again.",

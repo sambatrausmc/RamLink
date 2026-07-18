@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, CalendarDays, Mail, MapPin, Users } from "lucide-react";
+import { SignedOutOnly } from "@/components/auth/session-aware-content";
 // Shared cards and UI components
 import { AnnouncementCard } from "@/components/cards/announcement-card";
 import { EventCard } from "@/components/cards/event-card";
@@ -50,7 +51,7 @@ export default async function ClubProfilePage({
           title={club.name}
           description={club.description}
           actions={
-            <>
+            <SignedOutOnly>
               {/* Prompt visitors to sign in if they want to join */}
               <Link
                 href="/login"
@@ -75,7 +76,7 @@ export default async function ClubProfilePage({
               >
                 Create Account
               </Link>
-            </>
+            </SignedOutOnly>
           }
           aside={
             // Side card displaying quick club information
@@ -177,29 +178,31 @@ export default async function ClubProfilePage({
             {/* Student action panel for joining, saving, and contacting the club */}
             <ClubProfileActions club={club} />
             {/* Sign-in call-to-action */}
-            <Card className="bg-brand-forest text-white">
-              <CardContent>
-                <h2 className="font-display text-xl font-semibold">
-                  Sign in to join or save this club.
-                </h2>
+            <SignedOutOnly>
+              <Card className="bg-brand-forest text-white">
+                <CardContent>
+                  <h2 className="font-display text-xl font-semibold">
+                    Sign in to join or save this club.
+                  </h2>
 
-                <p className="mt-2 text-sm leading-6 text-brand-mist/85">
-                  Create an account to request membership, save clubs, and
-                  follow updates.
-                </p>
+                  <p className="mt-2 text-sm leading-6 text-brand-mist/85">
+                    Create an account to request membership, save clubs, and
+                    follow updates.
+                  </p>
 
-                <Link
-                  href="/login"
-                  className={`
+                  <Link
+                    href="/login"
+                    className={`
                               mt-5 inline-flex items-center justify-center rounded-[11px]
                               bg-brand-goldLight px-4 py-3 text-sm font-semibold leading-none
                               text-brand-forestDark
                             `}
-                >
-                  Sign In
-                </Link>
-              </CardContent>
-            </Card>
+                  >
+                    Sign In
+                  </Link>
+                </CardContent>
+              </Card>
+            </SignedOutOnly>
             {/* Recent club announcements */}
             <section className="space-y-4">
               <h2 className="font-display text-2xl font-semibold text-brand-ink">

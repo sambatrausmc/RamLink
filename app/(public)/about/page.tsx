@@ -1,21 +1,25 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Search, Users } from "lucide-react";
+import { SessionAwareLink } from "@/components/auth/session-aware-content";
 import { PageHero } from "@/components/common/page-hero";
 
 const points = [
   {
     title: "Discover campus groups",
-    description: "Find student organizations by interest, category, and meeting schedule.",
+    description:
+      "Find student organizations by interest, category, and meeting schedule.",
     icon: Search,
   },
   {
     title: "Follow events",
-    description: "See what clubs are hosting and keep track of events you want to attend.",
+    description:
+      "See what clubs are hosting and keep track of events you want to attend.",
     icon: CalendarDays,
   },
   {
     title: "Join communities",
-    description: "Create an account when you are ready to save clubs or request membership.",
+    description:
+      "Create an account when you are ready to save clubs or request membership.",
     icon: Users,
   },
 ];
@@ -28,7 +32,8 @@ export default function AboutPage() {
           eyebrow="About RamLink"
           title={
             <>
-              A simple way to find your <span className="text-brand-forest">campus circle.</span>
+              A simple way to find your{" "}
+              <span className="text-brand-forest">campus circle.</span>
             </>
           }
           description="RamLink helps Farmingdale students discover clubs, events, and student communities without digging through scattered updates."
@@ -42,12 +47,11 @@ export default function AboutPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
 
-              <Link
-                href="/register"
+              <SessionAwareLink
+                signedOutHref="/register"
+                signedOutContent="Create Account"
                 className="inline-flex items-center justify-center rounded-[11px] border border-brand-mist bg-white px-5 py-3.5 text-[15px] font-semibold leading-none text-brand-forest transition hover:-translate-y-0.5 hover:border-brand-greenLight hover:bg-brand-surface"
-              >
-                Create Account
-              </Link>
+              />
             </>
           }
         />
@@ -66,7 +70,9 @@ export default function AboutPage() {
                 <h2 className="mt-5 font-display text-xl font-semibold tracking-[-0.02em] text-brand-ink">
                   {point.title}
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-brand-muted">{point.description}</p>
+                <p className="mt-2 text-sm leading-6 text-brand-muted">
+                  {point.description}
+                </p>
               </article>
             );
           })}
@@ -77,7 +83,8 @@ export default function AboutPage() {
             Ready to get involved?
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-brand-mist/85">
-            Start by browsing clubs, then create an account when you want to save, RSVP, or join.
+            Start by browsing clubs, then create an account when you want to
+            save, RSVP, or join.
           </p>
 
           <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
@@ -88,12 +95,11 @@ export default function AboutPage() {
               Browse Clubs
             </Link>
 
-            <Link
-              href="/register"
+            <SessionAwareLink
+              signedOutHref="/register"
+              signedOutContent="Create Account"
               className="inline-flex items-center justify-center rounded-[11px] border border-white/20 bg-white/10 px-5 py-3.5 text-sm font-semibold leading-none text-white transition hover:-translate-y-0.5 hover:bg-white/15"
-            >
-              Create Account
-            </Link>
+            />
           </div>
         </section>
       </div>
