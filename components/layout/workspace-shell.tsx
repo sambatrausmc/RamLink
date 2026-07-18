@@ -114,6 +114,15 @@ const initials =
               <Link href="/homepage" className="rounded-lg px-3 py-2.5 text-sm font-semibold text-brand-muted hover:bg-brand-surface hover:text-brand-forest" onClick={() => setMenuOpen(false)}>
                 Public Site
               </Link>
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-brand-muted hover:bg-brand-surface"
+                onClick={handleSignOut}
+                disabled={signingOut}
+              >
+                <LogOut className="h-4 w-4" />
+                {signingOut ? "Signing out..." : "Sign out"}
+              </button>
             </div>
           </div>
         ) : null}
