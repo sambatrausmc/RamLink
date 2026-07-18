@@ -62,7 +62,7 @@ export function EventCard({ event, compact = false, actionMode = "workspace" }: 
     setIsRsvping(true);
     setFeedback("");
     try {
-      const nextRsvp = await toggleEventRsvp(user.uid, event.id, hasRsvped);
+      const nextRsvp = await toggleEventRsvp(user.uid, event.id);
       setRsvpOverride(nextRsvp);
       setRsvpCountAdjustment((current) => current + (nextRsvp ? 1 : -1));
       setFeedback(nextRsvp ? "RSVP saved." : "RSVP removed.");
