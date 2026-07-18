@@ -1,10 +1,11 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { LogOut, Menu, UserRound, X } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { RamLinkLogo } from "@/components/brand/ramlink-logo";
+import { logoutCurrentUser } from "@/lib/firebase/auth";
 import { cn } from "@/lib/utils";
 export type WorkspaceNavItem = {
   label: string;
@@ -31,14 +32,35 @@ export function WorkspaceShell({
   children,
 }: WorkspaceShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { profile, user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const displayName =
     profile?.displayName ||
     user?.displayName ||
     user?.email ||
     "RamLink account";
   const initials = getAccountInitials(displayName);
+  const profileHref =
+    profile?.role === "clubOfficer"
+      ? "/club/profile"
+      : profile?.role === "admin"
+        ? "/admin/users"
+        : "/profile";
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await logoutCurrentUser();
+      setAccountOpen(false);
+      setMenuOpen(false);
+      router.push("/login");
+      router.refresh();
+    } finally {
+      setSigningOut(false);
+    }
+  }
   return (
     <div className="min-h-screen bg-brand-surface text-brand-ink">
       <header className="sticky top-0 z-50 border-b border-brand-mist bg-white/92 backdrop-blur-xl">
@@ -73,7 +95,7 @@ export function WorkspaceShell({
               );
             })}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="relative flex items-center gap-2">
             <Link
               href="/homepage"
               className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-brand-muted transition hover:bg-brand-surface
@@ -81,12 +103,44 @@ hover:text-brand-forest md:inline-flex"
             >
               Public Site
             </Link>
-            <span
+            <button
+              type="button"
               className="hidden h-9 w-9 place-items-center rounded-full bg-brand-forest text-sm font-bold text-white md:grid"
               title={displayName}
+              aria-label="Open account menu"
+              aria-expanded={accountOpen}
+              onClick={() => setAccountOpen((value) => !value)}
             >
               {initials}
-            </span>
+            </button>
+            {accountOpen ? (
+              <div className="absolute right-0 top-12 z-50 hidden w-60 rounded-[12px] border border-brand-mist bg-white p-2 shadow-lift md:block">
+                <div className="border-b border-brand-surface px-3 py-2">
+                  <p className="truncate text-sm font-semibold text-brand-ink">
+                    {displayName}
+                  </p>
+                  <p className="text-xs text-brand-muted">{roleLabel}</p>
+                </div>
+                <Link
+                  href={profileHref}
+                  className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-brand-muted hover:bg-brand-surface
+hover:text-brand-forest"
+                  onClick={() => setAccountOpen(false)}
+                >
+                  <UserRound className="h-4 w-4" /> Profile
+                </Link>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-brand-muted hover:bg-brand-surface
+hover:text-brand-forest"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                >
+                  <LogOut className="h-4 w-4" />{" "}
+                  {signingOut ? "Signing out..." : "Sign out"}
+                </button>
+              </div>
+            ) : null}
             <button
               type="button"
               aria-label="Menu"
@@ -132,6 +186,28 @@ hover:text-brand-forest md:inline-flex"
               >
                 Public Site
               </Link>
+              <div className="mt-2 border-t border-brand-mist pt-2">
+                <p className="px-3 py-1 text-xs font-semibold text-brand-muted">
+                  {displayName}
+                </p>
+                <Link
+                  href={profileHref}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-brand-muted hover:bg-brand-surface hover:textbrand-forest"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <UserRound className="h-4 w-4" /> Profile
+                </Link>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-brand-muted hover:bg-brand-surface
+hover:text-brand-forest"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                >
+                  <LogOut className="h-4 w-4" />{" "}
+                  {signingOut ? "Signing out..." : "Sign out"}
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
