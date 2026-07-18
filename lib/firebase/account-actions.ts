@@ -1,9 +1,4 @@
-import { sendEmailVerification, sendPasswordResetEmail, signOut } from "firebase/auth";
-
-export async function requestPasswordReset(email: string) {
-  const { auth } = await import("@/lib/firebase/client");
-  await sendPasswordResetEmail(auth, email);
-}
+import { sendEmailVerification, signOut } from "firebase/auth";
 
 // Triggers an email verification link to the currently logged-in student
 export async function sendCurrentUserVerification() {

@@ -33,6 +33,7 @@ vi.mock("@/lib/firebase/auth", () => ({
 }));
 
 import { LoginForm } from "@/components/auth/login-form";
+import { PasswordResetForm } from "@/components/auth/password-reset-form";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 
 describe("account actions", () => {
@@ -44,33 +45,48 @@ describe("account actions", () => {
     mocks.resetPasswordForEmail.mockResolvedValue(undefined);
   });
 
-  it("requires an email before requesting a password reset", () => {
+  it("links login users to the dedicated password reset page", () => {
     render(<LoginForm />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Forgot password?" }));
 
     expect(
-      screen.getByText(
-        "Enter your school email before requesting a password reset.",
+      screen.getByRole("link", { name: "Forgot password?" }).getAttribute(
+        "href",
       ),
-    ).toBeTruthy();
-    expect(mocks.resetPasswordForEmail).not.toHaveBeenCalled();
+    ).toBe("/forgot-password");
   });
 
-  it("sends a password reset to the entered email", async () => {
-    render(<LoginForm />);
+  it("submits a reset request and shows success feedback", async () => {
+    render(<PasswordResetForm />);
 
     fireEvent.change(screen.getByLabelText("School email"), {
       target: { value: " student@farmingdale.edu " },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Forgot password?" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send reset email" }));
 
     await waitFor(() => {
       expect(mocks.resetPasswordForEmail).toHaveBeenCalledWith(
         "student@farmingdale.edu",
       );
     });
-    expect(screen.getByText("Password reset email sent.")).toBeTruthy();
+    expect(
+      screen.getByText("Check your email for a password reset link."),
+    ).toBeTruthy();
+  });
+
+  it("shows reset failure feedback", async () => {
+    mocks.resetPasswordForEmail.mockRejectedValueOnce(new Error("offline"));
+    render(<PasswordResetForm />);
+
+    fireEvent.change(screen.getByLabelText("School email"), {
+      target: { value: "student@farmingdale.edu" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send reset email" }));
+
+    expect(
+      await screen.findByText(
+        "Unable to send a reset email. Check the address and try again.",
+      ),
+    ).toBeTruthy();
   });
 
   it("signs out and returns the user to login", async () => {

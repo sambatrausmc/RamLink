@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { requestPasswordReset } from "@/lib/firebase/account-actions";
+import { resetPasswordForEmail } from "@/lib/firebase/auth";
 
 export function PasswordResetForm() {
   const [email, setEmail] = useState("");
@@ -16,7 +16,7 @@ export function PasswordResetForm() {
     setSending(true);
     setFeedback("");
     try {
-      await requestPasswordReset(email);
+      await resetPasswordForEmail(email.trim());
       setFeedback("Check your email for a password reset link.");
     } catch {
       setFeedback("Unable to send a reset email. Check the address and try again.");
