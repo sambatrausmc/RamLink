@@ -6,6 +6,7 @@ import {
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import {
+  arrayRemove,
   arrayUnion,
   collection,
   deleteDoc,
@@ -90,6 +91,12 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         title: "Campus Event",
         rsvpCount: 0,
       });
+
+      await setDoc(doc(database, "events/event-2"), {
+        clubId: "club-1",
+        title: "Second Campus Event",
+        rsvpCount: 0,
+      });
     });
   });
 
@@ -136,8 +143,47 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     await assertSucceeds(batch.commit());
 
     await assertFails(
+      updateDoc(doc(studentDb, "users/student-1"), {
+        rsvpedEventIds: arrayRemove("event-1"),
+        rsvpMutation: { eventId: "event-1", countChange: -1 },
+        updatedAt: serverTimestamp(),
+      }),
+    );
+
+    await assertFails(
       updateDoc(doc(studentDb, "events/event-1"), { rsvpCount: 2 }),
     );
+
+    const mismatchedBatch = writeBatch(studentDb);
+    mismatchedBatch.update(doc(studentDb, "users/student-1"), {
+      rsvpedEventIds: arrayUnion("event-2"),
+      rsvpMutation: { eventId: "event-2", countChange: 1 },
+      updatedAt: serverTimestamp(),
+    });
+    mismatchedBatch.update(doc(studentDb, "events/event-1"), {
+      rsvpCount: 2,
+      updatedAt: serverTimestamp(),
+    });
+    await assertFails(mismatchedBatch.commit());
+
+    const removalBatch = writeBatch(studentDb);
+    removalBatch.update(doc(studentDb, "users/student-1"), {
+      rsvpedEventIds: arrayRemove("event-1"),
+      rsvpMutation: { eventId: "event-1", countChange: -1 },
+      updatedAt: serverTimestamp(),
+    });
+    removalBatch.update(doc(studentDb, "events/event-1"), {
+      rsvpCount: 0,
+      updatedAt: serverTimestamp(),
+    });
+    await assertSucceeds(removalBatch.commit());
+
+    const [studentSnapshot, eventSnapshot] = await Promise.all([
+      getDoc(doc(studentDb, "users/student-1")),
+      getDoc(doc(studentDb, "events/event-1")),
+    ]);
+    expect(studentSnapshot.data()?.rsvpedEventIds).toEqual([]);
+    expect(eventSnapshot.data()?.rsvpCount).toBe(0);
   });
 
   it("allows a student to cancel only their own pending request", async () => {
