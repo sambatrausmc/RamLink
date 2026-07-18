@@ -94,4 +94,25 @@ describe("account actions", () => {
       expect(mocks.refresh).toHaveBeenCalledOnce();
     });
   });
+
+  it("opens the student account menu with profile access", () => {
+    render(
+      <WorkspaceShell
+        roleLabel="Student Mode"
+        navItems={[{ label: "Dashboard", href: "/dashboard" }]}
+      >
+        <p>Student workspace</p>
+      </WorkspaceShell>,
+    );
+
+    const accountButton = screen.getByRole("button", {
+      name: "Open account menu",
+    });
+    expect(accountButton.textContent).toBe("JE");
+    fireEvent.click(accountButton);
+
+    expect(screen.getByRole("link", { name: "Profile" }).getAttribute("href"))
+      .toBe("/profile");
+    expect(screen.getAllByText("Student Mode")).toHaveLength(2);
+  });
 });
