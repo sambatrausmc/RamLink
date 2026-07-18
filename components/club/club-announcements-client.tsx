@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { AnnouncementCard } from "@/components/cards/announcement-card";
 import { useManagedClub } from "@/components/club/use-managed-club";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { createClubAnnouncement } from "@/lib/firebase/club-workflows";
+import {
+  createClubAnnouncement,
+  deleteClubAnnouncement,
+  updateClubAnnouncement,
+} from "@/lib/firebase/club-workflows";
 import {
   getAnnouncementsForClub,
   getClubByIdFromFirestore,
@@ -78,9 +82,39 @@ export function ClubAnnouncementsClient() {
     }
   }
 
+  async function handleEdit(
+    formEvent: FormEvent<HTMLFormElement>,
+    announcementId: string,
+  ) {
+    formEvent.preventDefault();
+    if (!clubId) return;
+    const form = new FormData(formEvent.currentTarget);
+    try {
+      await updateClubAnnouncement(announcementId, {
+        title: String(form.get("title") ?? "").trim(),
+        body: String(form.get("body") ?? "").trim(),
+        priority: form.get("priority") === "important" ? "important" : "normal",
+      });
+      await loadAnnouncements(clubId);
+      setFeedback("Announcement updated.");
+    } catch {
+      setFeedback("Unable to update the announcement.");
+    }
+  }
+
+  async function handleDelete(announcementId: string) {
+    if (!clubId || !window.confirm("Delete this announcement?")) return;
+    try {
+      await deleteClubAnnouncement(announcementId);
+      await loadAnnouncements(clubId);
+      setFeedback("Announcement deleted.");
+    } catch {
+      setFeedback("Unable to delete the announcement.");
+    }
+  }
+
   if (loading)
     return <p className="text-sm text-brand-muted">Loading club access...</p>;
-
   if (!clubId)
     return (
       <p className="text-sm text-red-600">
@@ -126,7 +160,41 @@ export function ClubAnnouncementsClient() {
       </Card>
       <section className="space-y-4">
         {announcements.map((item) => (
-          <AnnouncementCard key={item.id} announcement={item} />
+          <div key={item.id} className="space-y-3">
+            <AnnouncementCard announcement={item} />
+            <details className="rounded-[12px] border border-brand-mist bg-white p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-brand-forest">
+                Edit announcement
+              </summary>
+              <form
+                className="mt-4 grid gap-3"
+                onSubmit={(event) => handleEdit(event, item.id)}
+              >
+                <Input name="title" defaultValue={item.title} required />
+                <textarea
+                  name="body"
+                  defaultValue={item.body}
+                  className="min-h-24 rounded-[12px] border border-brand-mist px-3.5 py-3 text-sm"
+                  required
+                />
+                <label className="flex items-center gap-2 text-sm text-brand-ink">
+                  <input
+                    name="priority"
+                    type="checkbox"
+                    value="important"
+                    defaultChecked={item.priority === "important"}
+                  />
+                  Mark as important
+                </label>
+                <Button className="w-fit" size="sm" type="submit">
+                  <Pencil className="h-4 w-4" /> Update announcement
+                </Button>
+              </form>
+            </details>
+            <Button size="sm" variant="outline" onClick={() => handleDelete(item.id)}>
+              <Trash2 className="h-4 w-4" /> Delete announcement
+            </Button>
+          </div>
         ))}
       </section>
     </div>

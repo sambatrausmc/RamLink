@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { ResourceCard } from "@/components/cards/resource-card";
 import { useManagedClub } from "@/components/club/use-managed-club";
 import { PageHeader } from "@/components/common/page-header";
@@ -10,7 +10,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   createClubResource,
+  deleteClubResource,
   parseResourceType,
+  updateClubResource,
 } from "@/lib/firebase/club-workflows";
 import { getResourcesForClub } from "@/lib/firebase/public-data";
 import type { Resource } from "@/lib/types";
@@ -66,9 +68,40 @@ export function ClubResourcesClient() {
     }
   }
 
+  async function handleEdit(
+    formEvent: FormEvent<HTMLFormElement>,
+    resourceId: string,
+  ) {
+    formEvent.preventDefault();
+    if (!clubId) return;
+    const form = new FormData(formEvent.currentTarget);
+    try {
+      await updateClubResource(resourceId, {
+        title: String(form.get("title") ?? "").trim(),
+        description: String(form.get("description") ?? "").trim(),
+        type: parseResourceType(String(form.get("type") ?? "Link")),
+        url: String(form.get("url") ?? "").trim(),
+      });
+      await loadResources(clubId);
+      setFeedback("Resource updated.");
+    } catch {
+      setFeedback("Unable to update the resource.");
+    }
+  }
+
+  async function handleDelete(resourceId: string) {
+    if (!clubId || !window.confirm("Delete this resource?")) return;
+    try {
+      await deleteClubResource(resourceId);
+      await loadResources(clubId);
+      setFeedback("Resource deleted.");
+    } catch {
+      setFeedback("Unable to delete the resource.");
+    }
+  }
+
   if (loading)
     return <p className="text-sm text-brand-muted">Loading club access...</p>;
-
   if (!clubId)
     return (
       <p className="text-sm text-red-600">
@@ -130,7 +163,44 @@ export function ClubResourcesClient() {
       </Card>
       <section className="space-y-4">
         {resources.map((resource) => (
-          <ResourceCard key={resource.id} resource={resource} />
+          <div key={resource.id} className="space-y-3">
+            <ResourceCard resource={resource} />
+            <details className="rounded-[12px] border border-brand-mist bg-white p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-brand-forest">
+                Edit resource
+              </summary>
+              <form
+                className="mt-4 grid gap-3 md:grid-cols-2"
+                onSubmit={(event) => handleEdit(event, resource.id)}
+              >
+                <Input name="title" defaultValue={resource.title} required />
+                <select
+                  name="type"
+                  defaultValue={resource.type}
+                  className="h-11 rounded-[12px] border border-brand-mist bg-white px-3.5 text-sm"
+                >
+                  <option>Link</option>
+                  <option>Form</option>
+                  <option>Waiver</option>
+                  <option>Guide</option>
+                  <option>Document</option>
+                </select>
+                <Input name="url" type="url" defaultValue={resource.url} required />
+                <textarea
+                  name="description"
+                  defaultValue={resource.description}
+                  className="min-h-24 rounded-[12px] border border-brand-mist px-3.5 py-3 text-sm md:col-span-2"
+                  required
+                />
+                <Button className="w-fit" size="sm" type="submit">
+                  <Pencil className="h-4 w-4" /> Update resource
+                </Button>
+              </form>
+            </details>
+            <Button size="sm" variant="outline" onClick={() => handleDelete(resource.id)}>
+              <Trash2 className="h-4 w-4" /> Delete resource
+            </Button>
+          </div>
         ))}
       </section>
     </div>

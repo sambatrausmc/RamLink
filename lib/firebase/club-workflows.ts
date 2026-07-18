@@ -3,6 +3,7 @@ import {
   arrayRemove,
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -50,6 +51,18 @@ export type CreateResourceInput = {
   type: ResourceType;
   url: string;
 };
+
+export type UpdateClubEventInput = Omit<
+  CreateClubEventInput,
+  "clubId" | "clubName"
+>;
+
+export type UpdateAnnouncementInput = Pick<
+  CreateAnnouncementInput,
+  "title" | "body" | "priority"
+>;
+
+export type UpdateResourceInput = Omit<CreateResourceInput, "clubId">;
 
 // Restricts club updates to specific editable profile fields
 export type UpdateClubProfileInput = Pick<
@@ -113,6 +126,22 @@ export async function createClubEvent(input: CreateClubEventInput) {
   });
 }
 
+export async function updateClubEvent(
+  eventId: string,
+  input: UpdateClubEventInput,
+) {
+  const db = await getDb();
+  await updateDoc(doc(db, COLLECTIONS.events, eventId), {
+    ...input,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteClubEvent(eventId: string) {
+  const db = await getDb();
+  await deleteDoc(doc(db, COLLECTIONS.events, eventId));
+}
+
 // Posts a new announcement and automatically notifies all existing club members
 export async function createClubAnnouncement(input: CreateAnnouncementInput) {
   const db = await getDb();
@@ -147,6 +176,22 @@ export async function createClubAnnouncement(input: CreateAnnouncementInput) {
   await batch.commit();
 }
 
+export async function updateClubAnnouncement(
+  announcementId: string,
+  input: UpdateAnnouncementInput,
+) {
+  const db = await getDb();
+  await updateDoc(doc(db, COLLECTIONS.announcements, announcementId), {
+    ...input,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteClubAnnouncement(announcementId: string) {
+  const db = await getDb();
+  await deleteDoc(doc(db, COLLECTIONS.announcements, announcementId));
+}
+
 // Uploads a new club resource link or document reference
 export async function createClubResource(input: CreateResourceInput) {
   const db = await getDb();
@@ -154,6 +199,22 @@ export async function createClubResource(input: CreateResourceInput) {
     ...input,
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function updateClubResource(
+  resourceId: string,
+  input: UpdateResourceInput,
+) {
+  const db = await getDb();
+  await updateDoc(doc(db, COLLECTIONS.resources, resourceId), {
+    ...input,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteClubResource(resourceId: string) {
+  const db = await getDb();
+  await deleteDoc(doc(db, COLLECTIONS.resources, resourceId));
 }
 
 // Updates basic club profile information
@@ -239,7 +300,7 @@ export async function replyToInquiry(inquiryId: string, body: string) {
   const db = await getDb();
   const inquiryRef = doc(db, COLLECTIONS.inquiries, inquiryId);
   const snapshot = await getDoc(inquiryRef);
-  
+
   if (!snapshot.exists()) {
     throw new Error("Inquiry not found.");
   }
@@ -249,7 +310,6 @@ export async function replyToInquiry(inquiryId: string, body: string) {
   const reply = buildOfficerReply(existingReplies, body);
 
   const batch = writeBatch(db);
-
   // Append reply and ensure inquiry status remains open
   batch.update(inquiryRef, {
     replies: [...existingReplies, reply],
