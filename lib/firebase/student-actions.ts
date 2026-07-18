@@ -201,17 +201,22 @@ export async function toggleEventRsvp(
       : [];
     const currentlySaved = savedRsvps.includes(eventId);
     const nextRsvp = !currentlySaved;
+    const countChange = nextRsvp ? 1 : -1;
     const currentCount = Number(eventSnapshot.data().rsvpCount ?? 0);
 
     transaction.update(userRef, {
       rsvpedEventIds: nextRsvp
         ? arrayUnion(eventId)
         : arrayRemove(eventId),
+      rsvpMutation: {
+        eventId,
+        countChange,
+      },
       updatedAt: serverTimestamp(),
     });
 
     transaction.update(eventRef, {
-      rsvpCount: Math.max(0, currentCount + (nextRsvp ? 1 : -1)),
+      rsvpCount: Math.max(0, currentCount + countChange),
       updatedAt: serverTimestamp(),
     });
 

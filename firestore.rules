@@ -74,9 +74,37 @@ service cloud.firestore {
           "interests",
           "savedClubIds",
           "savedEventIds",
-          "rsvpedEventIds",
           "updatedAt"
         ]);
+    }
+
+    function studentUpdatesOwnRsvpProfile(userId) {
+      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+      let previousRsvps = resource.data.rsvpedEventIds.toSet();
+      let nextRsvps = request.resource.data.rsvpedEventIds.toSet();
+      let addedRsvps = nextRsvps.difference(previousRsvps);
+      let removedRsvps = previousRsvps.difference(nextRsvps);
+      let mutation = request.resource.data.rsvpMutation;
+      let eventPath = /databases/$(database)/documents/events/$(mutation.eventId);
+      return isSelf(userId) &&
+        "rsvpMutation" in request.resource.data &&
+        mutation.eventId is string &&
+        mutation.countChange in [-1, 1] &&
+        changedFields.hasOnly(["rsvpedEventIds", "rsvpMutation", "updatedAt"]) &&
+        exists(eventPath) &&
+        existsAfter(eventPath) &&
+        getAfter(eventPath).data.rsvpCount ==
+          get(eventPath).data.rsvpCount + mutation.countChange &&
+        (
+          (mutation.countChange == 1 &&
+            addedRsvps.hasOnly([mutation.eventId]) &&
+            addedRsvps.size() == 1 &&
+            removedRsvps.size() == 0) ||
+          (mutation.countChange == -1 &&
+            removedRsvps.hasOnly([mutation.eventId]) &&
+            removedRsvps.size() == 1 &&
+            addedRsvps.size() == 0)
+        );
     }
 
     function studentUpdatesOwnRsvp(eventId) {
@@ -88,8 +116,13 @@ service cloud.firestore {
       let nextRsvps = nextUser.data.rsvpedEventIds.toSet();
       let addedRsvps = nextRsvps.difference(previousRsvps);
       let removedRsvps = previousRsvps.difference(nextRsvps);
+      let mutation = nextUser.data.rsvpMutation;
       let countChange = request.resource.data.rsvpCount - resource.data.rsvpCount;
       return isSignedIn() &&
+        "rsvpMutation" in nextUser.data &&
+        mutation.eventId == eventId &&
+        mutation.countChange == countChange &&
+        request.resource.data.rsvpCount >= 0 &&
         changedFields.hasOnly(["rsvpCount", "updatedAt"]) &&
         (
           (countChange == 1 &&
@@ -144,6 +177,7 @@ service cloud.firestore {
       allow read: if isSelf(userId) || isAdmin() || officerCanReadManagedMember();
       allow update: if
         selfUpdatesAllowedProfileFields(userId) ||
+        studentUpdatesOwnRsvpProfile(userId) ||
         isAdmin() ||
         officerUpdatesManagedMembership();
       allow delete: if isAdmin();

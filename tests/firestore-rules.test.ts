@@ -126,6 +126,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     const batch = writeBatch(studentDb);
     batch.update(doc(studentDb, "users/student-1"), {
       rsvpedEventIds: arrayUnion("event-1"),
+      rsvpMutation: { eventId: "event-1", countChange: 1 },
       updatedAt: serverTimestamp(),
     });
     batch.update(doc(studentDb, "events/event-1"), {
