@@ -66,6 +66,20 @@ export function NotificationsClient({
     (notification) => notification.status === "unread",
   ).length;
   const visibleNotifications = filterNotifications(notifications, filter);
+
+  function handleStatusChange(
+    notificationId: string,
+    status: NotificationType["status"],
+  ) {
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === notificationId
+          ? { ...notification, status }
+          : notification,
+      ),
+    );
+  }
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -135,6 +149,7 @@ export function NotificationsClient({
               <NotificationItem
                 key={notification.id}
                 notification={notification}
+                onStatusChange={handleStatusChange}
               />
             ))}
           </div>

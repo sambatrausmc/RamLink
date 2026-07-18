@@ -9,16 +9,25 @@ import type { NotificationItem as NotificationItemType } from "@/lib/types";
 
 type NotificationItemProps = {
   notification: NotificationItemType;
+  onStatusChange?: (
+    notificationId: string,
+    status: NotificationItemType["status"],
+  ) => void;
 };
 
-export function NotificationItem({ notification }: NotificationItemProps) {
+export function NotificationItem({
+  notification,
+  onStatusChange,
+}: NotificationItemProps) {
   const [status, setStatus] = useState(notification.status);
 
   function markRead() {
     if (status === "read") return;
     setStatus("read");
+    onStatusChange?.(notification.id, "read");
     updateNotificationStatus(notification.id, "read").catch(() => {
       setStatus("unread");
+      onStatusChange?.(notification.id, "unread");
     });
   }
 

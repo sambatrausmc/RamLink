@@ -123,6 +123,20 @@ export function StudentDashboardClient({
   const unreadNotifications = studentNotifications.filter(
     (notification) => notification.status === "unread",
   );
+
+  function handleNotificationStatusChange(
+    notificationId: string,
+    status: NotificationType["status"],
+  ) {
+    setStudentNotifications((current) =>
+      current.map((notification) =>
+        notification.id === notificationId
+          ? { ...notification, status }
+          : notification,
+      ),
+    );
+  }
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -241,6 +255,7 @@ export function StudentDashboardClient({
                   <NotificationItem
                     key={notification.id}
                     notification={notification}
+                    onStatusChange={handleNotificationStatusChange}
                   />
                 ))
             ) : (
