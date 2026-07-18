@@ -139,6 +139,7 @@ export type ClubInquiry = {
 // Content moderation flags submitted to administrators
 export type Report = {
   id: string;
+  reporterId?: string;
   reporterName: string;
   contentType: "Announcement" | "Event" | "Resource" | "Club Profile";
   contentTitle: string;

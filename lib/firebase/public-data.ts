@@ -279,6 +279,7 @@ function normalizeReport(snapshot: QueryDocumentSnapshot<DocumentData>): Report 
   const data = snapshot.data();
   return {
     id: snapshot.id,
+    reporterId: readString(data.reporterId) || undefined,
     reporterName: readString(data.reporterName, "RamLink user"),
     contentType:
       data.contentType === "Event" ||

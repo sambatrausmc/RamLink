@@ -13,9 +13,19 @@ export type SubmitReportInput = Pick<
 // Submits a new content report to Firestore for administrator review
 export async function submitContentReport(input: SubmitReportInput) {
   const { db } = await import("@/lib/firebase/client");
+  const reportData = {
+    ...input,
+    reporterName: input.reporterName.trim(),
+    contentTitle: input.contentTitle.trim(),
+    reason: input.reason.trim(),
+  };
+
+  if (!reportData.reporterName || !reportData.contentTitle || !reportData.reason) {
+    throw new Error("Report fields cannot be empty.");
+  }
 
   const report = await addDoc(collection(db, COLLECTIONS.reports), {
-    ...input,
+    ...reportData,
     status: "new",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
