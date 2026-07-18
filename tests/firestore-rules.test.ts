@@ -79,6 +79,17 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         status: "pending",
       });
 
+      await setDoc(doc(database, "joinRequests/student-1_club-1"), {
+        clubId: "club-1",
+        clubName: "Campus Club",
+        studentId: "student-1",
+        studentName: "Student One",
+        message: "Please reconsider my request.",
+        status: "rejected",
+        createdAt: new Date("2026-07-01T12:00:00Z"),
+        updatedAt: new Date("2026-07-01T12:00:00Z"),
+      });
+
       await setDoc(doc(database, "inquiries/inquiry-1"), {
         clubId: "club-1",
         studentId: "student-1",
@@ -200,6 +211,65 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
 
     await assertSucceeds(
       deleteDoc(doc(studentDb, "joinRequests/request-1")),
+    );
+  });
+
+  it("requires deterministic IDs for new join requests", async () => {
+    const studentDb = testEnvironment
+      .authenticatedContext("student-1")
+      .firestore();
+    const requestData = {
+      clubId: "club-2",
+      clubName: "Second Campus Club",
+      studentId: "student-1",
+      studentName: "Student One",
+      message: "I would like to join.",
+      status: "pending",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    await assertFails(
+      setDoc(doc(studentDb, "joinRequests/arbitrary-id"), requestData),
+    );
+
+    const requestRef = doc(studentDb, "joinRequests/student-1_club-2");
+    await assertSucceeds(setDoc(requestRef, requestData));
+    await assertFails(setDoc(requestRef, requestData));
+  });
+
+  it("allows rejected requests to reopen without bypassing approval", async () => {
+    const studentDb = testEnvironment
+      .authenticatedContext("student-1")
+      .firestore();
+    const requestRef = doc(studentDb, "joinRequests/student-1_club-1");
+
+    await assertSucceeds(
+      updateDoc(requestRef, {
+        message: "I am submitting an updated request.",
+        status: "pending",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }),
+    );
+
+    const officerDb = testEnvironment
+      .authenticatedContext("officer-1")
+      .firestore();
+    await assertSucceeds(
+      updateDoc(doc(officerDb, "joinRequests/student-1_club-1"), {
+        status: "approved",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+
+    await assertFails(
+      updateDoc(requestRef, {
+        message: "Reset approved request.",
+        status: "pending",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }),
     );
   });
 
