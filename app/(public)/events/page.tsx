@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays } from "lucide-react";
 import { PageHero } from "@/components/common/page-hero";
-import { EventDirectoryClient } from "@/components/public/event-directory-client";
-import { getClubs, getEvents } from "@/lib/firebase/public-data";
+import { EventBrowserClient } from "@/components/public/event-browser-client";
+import { getEvents } from "@/lib/firebase/public-data";
+export const dynamic = "force-dynamic";
 export default async function EventsPage() {
-  const [events, clubs] = await Promise.all([getEvents(), getClubs()]);
-
+  const events = await getEvents();
   return (
     <div className="bg-brand-surface/70">
       <div className="mx-auto w-full max-w-[1180px] space-y-10 px-5 py-12 md:px-6 md:py-16">
@@ -22,14 +22,24 @@ export default async function EventsPage() {
             <>
               <Link
                 href="/clubs"
-                className="inline-flex items-center justify-center gap-2 rounded-[11px] bg-brand-forest px-5 py-3.5 text-[15px] font-semibold leadingnone text-white shadow-[0_6px_16px_rgba(11,93,59,0.22)] transition hover:-translate-y-0.5 hover:bg-brand-forestDark"
+                className={`
+inline-flex items-center justify-center gap-2 rounded-[11px]
+bg-brand-forest px-5 py-3.5 text-[15px] font-semibold leading-none
+text-white shadow-[0_6px_16px_rgba(11,93,59,0.22)] transition
+hover:-translate-y-0.5 hover:bg-brand-forestDark
+`}
               >
                 Explore Clubs
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center rounded-[11px] border border-brand-mist bg-white px-5 py-3.5 text-[15px] fontsemibold leading-none text-brand-forest transition hover:-translate-y-0.5 hover:border-brand-greenLight hover:bg-brand-surface"
+                className={`
+inline-flex items-center justify-center rounded-[11px] border
+border-brand-mist bg-white px-5 py-3.5 text-[15px] font-semibold
+leading-none text-brand-forest transition hover:-translate-y-0.5
+hover:border-brand-greenLight hover:bg-brand-surface
+`}
               >
                 Create Account
               </Link>
@@ -53,7 +63,13 @@ export default async function EventsPage() {
             </div>
           }
         />
-        <EventDirectoryClient events={events} clubs={clubs} />
+        <div>
+          <p className="text-sm font-semibold text-brand-green">Plan ahead</p>
+          <h2 className="font-display text-3xl font-semibold text-brand-ink">
+            Upcoming events
+          </h2>
+        </div>
+        <EventBrowserClient events={events} />
       </div>
     </div>
   );
