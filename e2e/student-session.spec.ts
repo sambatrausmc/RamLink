@@ -28,7 +28,19 @@ test("student can sign in and open protected pages", async ({ page }) => {
   await page.getByLabel("Password").fill(studentPassword!);
   await page.getByRole("button", { name: "Sign In" }).click();
 
-  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goto("/homepage");
+  await expect(
+    page.getByRole("link", { name: /Dashboard/ }).first(),
+  ).toBeVisible();
+  await page.goto("/clubs");
+  await expect(
+    page.getByRole("link", { name: /Dashboard/ }).first(),
+  ).toBeVisible();
+  await page.goto("/dashboard");
+  await expect(
+    page.getByRole("heading", { name: /Student Dashboard/ }),
+  ).toBeVisible();
   await page.goto("/account");
   await expect(
     page.getByRole("heading", { name: "Account Settings" }),

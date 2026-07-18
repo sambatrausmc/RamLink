@@ -52,10 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let unsubscribe = () => {};
 
     async function subscribeToFirebaseAuth() {
-      const [{ auth }, { onAuthStateChanged }] = await Promise.all([
-        import("@/lib/firebase/client"),
-        import("firebase/auth"),
-      ]);
+      const [{ auth, ensureAuthPersistence }, { onAuthStateChanged }] =
+        await Promise.all([
+          import("@/lib/firebase/client"),
+          import("firebase/auth"),
+        ]);
+
+      await ensureAuthPersistence();
 
       unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
         setUser(nextUser);

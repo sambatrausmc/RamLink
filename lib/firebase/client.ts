@@ -1,5 +1,9 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import {
+  browserLocalPersistence,
+  getAuth,
+  setPersistence,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { initializeFirebaseAppCheck } from "@/lib/firebase/app-check";
 
@@ -12,8 +16,26 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+export const firebaseApp = getApps().length
+  ? getApp()
+  : initializeApp(firebaseConfig);
 initializeFirebaseAppCheck(firebaseApp);
 
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
+
+let persistenceReady: Promise<void> | null = null;
+
+export function ensureAuthPersistence() {
+  if (typeof window === "undefined") {
+    return Promise.resolve();
+  }
+
+  if (!persistenceReady) {
+    persistenceReady = setPersistence(auth, browserLocalPersistence).catch(
+      () => undefined,
+    );
+  }
+
+  return persistenceReady;
+}

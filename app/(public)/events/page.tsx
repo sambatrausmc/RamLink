@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays } from "lucide-react";
+import { SessionAwareLink } from "@/components/auth/session-aware-content";
 import { PageHero } from "@/components/common/page-hero";
 import { EventBrowserClient } from "@/components/public/event-browser-client";
 import { getClubs, getEvents } from "@/lib/firebase/public-data";
@@ -35,17 +36,16 @@ hover:-translate-y-0.5 hover:bg-brand-forestDark
                 Explore Clubs
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link
-                href="/register"
+              <SessionAwareLink
+                signedOutHref="/register"
+                signedOutContent="Create Account"
                 className={`
 inline-flex items-center justify-center rounded-[11px] border
 border-brand-mist bg-white px-5 py-3.5 text-[15px] font-semibold
 leading-none text-brand-forest transition hover:-translate-y-0.5
 hover:border-brand-greenLight hover:bg-brand-surface
 `}
-              >
-                Create Account
-              </Link>
+              />
             </>
           }
           aside={

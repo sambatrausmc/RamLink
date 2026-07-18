@@ -16,7 +16,8 @@ export type LoginInput = {
   password: string;
 };
 async function getAuthClient() {
-  const { auth } = await import("@/lib/firebase/client");
+  const { auth, ensureAuthPersistence } = await import("@/lib/firebase/client");
+  await ensureAuthPersistence();
   return auth;
 }
 
