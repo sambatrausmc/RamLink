@@ -70,8 +70,17 @@ const initials =
               Public Site
             </Link>
             <span className="hidden h-9 w-9 place-items-center rounded-full bg-brand-forest text-sm font-bold text-white md:grid">
-              SB
+              {initials}
             </span>
+            <button
+              type="button"
+              className="hidden h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-brand-muted hover:bg-brand-surface md:inline-flex"
+              onClick={handleSignOut}
+              disabled={signingOut}
+            >
+              <LogOut className="h-4 w-4" />
+              {signingOut ? "Signing out..." : "Sign out"}
+            </button>
             <button
               type="button"
               aria-label="Menu"
