@@ -4,6 +4,8 @@ next-env.d.ts
 out
 dist
 coverage
+playwright-report/
+test-results/
 .env
 .env.local
 .env.*.local
