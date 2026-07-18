@@ -1,13 +1,13 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { format } from "date-fns";
 import { Bookmark, CalendarDays, Clock, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/common/status-badge";
 import { useAuth } from "@/components/auth/auth-provider";
+import { formatEventDate, formatEventTime } from "@/lib/event-format";
 import { toggleEventRsvp, toggleSavedEvent } from "@/lib/firebase/student-actions";
 import type { EventItem } from "@/lib/types";
 
@@ -27,7 +27,7 @@ export function EventCard({ event, compact = false, actionMode = "workspace" }: 
   const [isSaving, setIsSaving] = useState(false);
   const [isRsvping, setIsRsvping] = useState(false);
 
-  const date = format(new Date(`${event.date}T12:00:00`), "MMM d, yyyy");
+  const date = formatEventDate(event.date);
   const profileSaved = profile?.savedEventIds.includes(event.id) ?? event.isSaved ?? false;
   const profileRsvped = profile?.rsvpedEventIds?.includes(event.id) ?? event.hasRsvped ?? false;
   
@@ -97,7 +97,7 @@ export function EventCard({ event, compact = false, actionMode = "workspace" }: 
           </p>
           <p className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-brand-green" />
-            {event.startTime} - {event.endTime}
+            {formatEventTime(event.startTime)} - {formatEventTime(event.endTime)}
           </p>
           <p className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-brand-green" />

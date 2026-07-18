@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { toEventDateInputValue } from "@/lib/event-format";
 import {
   createClubEvent,
   deleteClubEvent,
@@ -181,9 +182,24 @@ export function ClubEventsClient() {
               >
                 <Input name="title" defaultValue={item.title} required />
                 <Input name="location" defaultValue={item.location} required />
-                <Input name="date" type="date" defaultValue={item.date} required />
-                <Input name="startTime" type="time" defaultValue={item.startTime} required />
-                <Input name="endTime" type="time" defaultValue={item.endTime} required />
+                <Input
+                  name="date"
+                  type="date"
+                  defaultValue={toEventDateInputValue(item.date)}
+                  required
+                />
+                <Input
+                  name="startTime"
+                  defaultValue={item.startTime}
+                  placeholder="5:00 PM"
+                  required
+                />
+                <Input
+                  name="endTime"
+                  defaultValue={item.endTime}
+                  placeholder="7:00 PM"
+                  required
+                />
                 <textarea
                   name="description"
                   defaultValue={item.description}
