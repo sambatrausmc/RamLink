@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  loginWithEmailAndPassword,
-  resetPasswordForEmail,
-} from "@/lib/firebase/auth";
+import { loginWithEmailAndPassword } from "@/lib/firebase/auth";
 
 export function LoginForm() {
   const router = useRouter();
@@ -16,7 +14,6 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,27 +29,6 @@ export function LoginForm() {
       );
     } finally {
       setIsSubmitting(false);
-    }
-  }
-
-  async function handlePasswordReset() {
-    if (!email.trim()) {
-      setFeedback(
-        "Enter your school email before requesting a password reset.",
-      );
-      return;
-    }
-
-    setIsResetting(true);
-    setFeedback("");
-
-    try {
-      await resetPasswordForEmail(email.trim());
-      setFeedback("Password reset email sent.");
-    } catch {
-      setFeedback("Unable to send a password reset email.");
-    } finally {
-      setIsResetting(false);
     }
   }
 
@@ -93,14 +69,12 @@ export function LoginForm() {
         {isSubmitting ? "Signing in..." : "Sign In"}
       </Button>
 
-      <button
-        type="button"
+      <Link
+        href="/forgot-password"
         className="w-full text-sm font-semibold text-brand-forest hover:underline"
-        onClick={handlePasswordReset}
-        disabled={isResetting}
       >
-        {isResetting ? "Sending reset email..." : "Forgot password?"}
-      </button>
+        Forgot password?
+      </Link>
     </form>
   );
 }

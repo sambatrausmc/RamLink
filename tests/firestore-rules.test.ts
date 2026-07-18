@@ -68,6 +68,12 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         managedClubIds: ["club-2"],
       });
 
+      await setDoc(doc(database, "users/admin-1"), {
+        role: "admin",
+        displayName: "Admin One",
+        joinedClubIds: [],
+      });
+
       await setDoc(doc(database, "users/member-1"), {
         role: "student",
         displayName: "Managed Club Member",
@@ -122,6 +128,13 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         clubId: "club-1",
         title: "Second Campus Event",
         rsvpCount: 0,
+      });
+
+      await setDoc(doc(database, "clubs/club-1"), {
+        name: "Campus Club",
+        description: "A student organization.",
+        status: "active",
+        memberCount: 1,
       });
 
       await setDoc(doc(database, "announcements/announcement-1"), {
@@ -435,5 +448,74 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     await assertSucceeds(
       deleteDoc(doc(officerDb, "resources/resource-1")),
     );
+  });
+
+  it("reserves club lifecycle changes for administrators", async () => {
+    const officerDb = testEnvironment
+      .authenticatedContext("officer-1")
+      .firestore();
+    const adminDb = testEnvironment.authenticatedContext("admin-1").firestore();
+    const clubRef = doc(officerDb, "clubs/club-1");
+
+    await assertSucceeds(
+      updateDoc(clubRef, {
+        description: "Updated by the club officer.",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(updateDoc(clubRef, { status: "suspended" }));
+    await assertFails(updateDoc(clubRef, { memberCount: 50 }));
+    await assertSucceeds(
+      updateDoc(doc(adminDb, "clubs/club-1"), {
+        status: "suspended",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+  });
+
+  it("accepts only authenticated reports owned by the reporter", async () => {
+    const studentDb = testEnvironment
+      .authenticatedContext("student-1")
+      .firestore();
+    const anonymousDb = testEnvironment.unauthenticatedContext().firestore();
+    const validReport = {
+      reporterId: "student-1",
+      reporterName: "Student One",
+      contentType: "Event",
+      contentTitle: "Campus Event",
+      reason: "The location is incorrect.",
+      status: "new",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    await assertSucceeds(
+      setDoc(doc(studentDb, "reports/report-1"), validReport),
+    );
+    await assertFails(
+      setDoc(doc(studentDb, "reports/report-2"), {
+        ...validReport,
+        reporterId: "another-user",
+      }),
+    );
+    await assertFails(
+      setDoc(doc(studentDb, "reports/report-3"), {
+        ...validReport,
+        status: "removed",
+      }),
+    );
+    await assertFails(
+      setDoc(doc(studentDb, "reports/report-4"), {
+        ...validReport,
+        internalNote: "Unexpected field",
+      }),
+    );
+    await assertFails(
+      setDoc(doc(anonymousDb, "reports/report-5"), validReport),
+    );
+
+    await assertFails(getDoc(doc(studentDb, "reports/report-1")));
+    const adminDb = testEnvironment.authenticatedContext("admin-1").firestore();
+    await assertSucceeds(getDoc(doc(adminDb, "reports/report-1")));
   });
 });
