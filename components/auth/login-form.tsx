@@ -2,7 +2,7 @@
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Login } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { loginWithEmailAndPassword } from "@/lib/firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +43,7 @@ export function LoginForm() {
       </Link>
       {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
       <Button className="w-full" type="submit" disabled={isSubmitting}>
-        <Login className="h-4 w-4" />
+        <LogIn className="h-4 w-4" />
         {isSubmitting ? "Signing in..." : "Sign In"}
       </Button>
     </form>

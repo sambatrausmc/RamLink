@@ -8,6 +8,7 @@ import {
   getDocs,
   increment,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
@@ -174,60 +175,60 @@ export async function updateJoinRequestStatus(
 ) {
   const db = await getDb();
   const requestRef = doc(db, COLLECTIONS.joinRequests, requestId);
-  const requestSnapshot = await getDoc(requestRef);
-  
-  if (!requestSnapshot.exists()) {
-    throw new Error("Join request not found.");
-  }
 
-  const request = requestSnapshot.data();
-  const studentId = String(request.studentId ?? "");
-  const clubId = String(request.clubId ?? "");
-  const previousStatus = request.status as RequestStatus;
+  await runTransaction(db, async (transaction) => {
+    // 1. Read inside the transaction so Firestore locks the state
+    const requestSnapshot = await transaction.get(requestRef);
+    
+    // Safe-check added to protect against undefined Vitest mock snapshots
+    if (!requestSnapshot || !requestSnapshot.exists()) {
+      throw new Error("Join request not found.");
+    }
 
-  const batch = writeBatch(db);
-  
-  // 1. Update the status on the join request itself
-  batch.update(requestRef, { status, updatedAt: serverTimestamp() });
+    const request = requestSnapshot.data();
+    const studentId = String(request.studentId ?? "");
+    const clubId = String(request.clubId ?? "");
+    const previousStatus = request.status as RequestStatus;
 
-  // 2. If newly approved, add club to student's joined array and increment club member count
-  if (status === "approved" && previousStatus !== "approved") {
-    batch.update(doc(db, COLLECTIONS.users, studentId), {
-      joinedClubIds: arrayUnion(clubId),
-      updatedAt: serverTimestamp(),
-    });
-    batch.update(doc(db, COLLECTIONS.clubs, clubId), {
-      memberCount: increment(1),
-    });
-  } 
-  // 3. If revoking an approved membership, remove from array and decrement count
-  else if (status !== "approved" && previousStatus === "approved") {
-    batch.update(doc(db, COLLECTIONS.users, studentId), {
-      joinedClubIds: arrayRemove(clubId),
-      updatedAt: serverTimestamp(),
-    });
-    batch.update(doc(db, COLLECTIONS.clubs, clubId), {
-      memberCount: increment(-1),
-    });
-  }
+    // 2. Update the status on the join request itself
+    transaction.update(requestRef, { status, updatedAt: serverTimestamp() });
 
-  // 4. Send an unread system notification to the student
-  batch.set(doc(collection(db, COLLECTIONS.notifications)), {
-    userId: studentId,
-    clubId,
-    title: status === "approved" ? "Club request approved" : "Club request updated",
-    body:
-      status === "approved"
-        ? "Your club membership request was approved."
-        : "Your club membership request was not approved.",
-    type: "joinRequest",
-    status: "unread",
-    relatedHref: "/dashboard",
-    createdAt: serverTimestamp(),
+    // 3. If newly approved, add club to student's joined array and increment club member count
+    if (status === "approved" && previousStatus !== "approved") {
+      transaction.update(doc(db, COLLECTIONS.users, studentId), {
+        joinedClubIds: arrayUnion(clubId),
+        updatedAt: serverTimestamp(),
+      });
+      transaction.update(doc(db, COLLECTIONS.clubs, clubId), {
+        memberCount: increment(1),
+      });
+    } 
+    // 4. If revoking an approved membership, remove from array and decrement count
+    else if (status !== "approved" && previousStatus === "approved") {
+      transaction.update(doc(db, COLLECTIONS.users, studentId), {
+        joinedClubIds: arrayRemove(clubId),
+        updatedAt: serverTimestamp(),
+      });
+      transaction.update(doc(db, COLLECTIONS.clubs, clubId), {
+        memberCount: increment(-1),
+      });
+    }
+
+    // 5. Send an unread system notification to the student
+    transaction.set(doc(collection(db, COLLECTIONS.notifications)), {
+      userId: studentId,
+      clubId,
+      title: status === "approved" ? "Club request approved" : "Club request updated",
+      body:
+        status === "approved"
+          ? "Your club membership request was approved."
+          : "Your club membership request was not approved.",
+      type: "joinRequest",
+      status: "unread",
+      relatedHref: "/dashboard",
+      createdAt: serverTimestamp(),
+    });
   });
-
-  // Execute all updates atomically
-  await batch.commit();
 }
 
 // Appends an officer reply to a student inquiry and fires a notification
@@ -236,7 +237,8 @@ export async function replyToInquiry(inquiryId: string, body: string) {
   const inquiryRef = doc(db, COLLECTIONS.inquiries, inquiryId);
   const snapshot = await getDoc(inquiryRef);
   
-  if (!snapshot.exists()) {
+  // Safe-check added to protect against undefined Vitest mock snapshots
+  if (!snapshot || !snapshot.exists()) {
     throw new Error("Inquiry not found.");
   }
 

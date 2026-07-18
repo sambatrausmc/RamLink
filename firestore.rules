@@ -42,6 +42,14 @@ service cloud.firestore {
         clubId in userDoc().data.managedClubIds);
     }
 
+    // Confirms officer manages at least one club the target user has joined
+    function isOfficerOfMember(targetData) {
+      return isOfficer() &&
+        "managedClubIds" in userDoc().data &&
+        "joinedClubIds" in targetData &&
+        targetData.joinedClubIds.hasAny(userDoc().data.managedClubIds);
+    }
+
     // Restricts officer updates on student profiles to modifying only memberships of clubs they manage
     function officerUpdatesManagedMembership() {
       let changedFields = request.resource.data.diff(resource.data).affectedKeys();
@@ -86,9 +94,14 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow create: if isSelf(userId) && request.resource.data.role == "student";
-      allow read: if isSelf(userId) || isAdmin() || isOfficer();
+      allow read: if isSelf(userId) || isAdmin() || isOfficerOfMember(resource.data);
       allow update: if
-        (isSelf(userId) && request.resource.data.role == resource.data.role) ||
+        (
+          isSelf(userId) && 
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.get("joinedClubIds", []) == resource.data.get("joinedClubIds", []) &&
+          request.resource.data.get("managedClubIds", []) == resource.data.get("managedClubIds", [])
+        ) ||
         isAdmin() ||
         officerUpdatesManagedMembership();
       allow delete: if isAdmin();
@@ -98,15 +111,26 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
       allow read: if isSignedIn() &&
         (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
-      allow update: if managesClub(resource.data.clubId);
+      allow update: if (
+        managesClub(resource.data.clubId) &&
+        request.resource.data.clubId == resource.data.clubId &&
+        request.resource.data.studentId == resource.data.studentId
+      ) || isAdmin();
       allow delete: if isAdmin();
     }
-
     match /inquiries/{inquiryId} {
+      allow read: if isSignedIn() && (
+        resource.data.studentId == request.auth.uid || 
+        managesClub(resource.data.clubId)
+      );
       allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
-      allow read: if isSignedIn() &&
-        (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
-      allow update: if managesClub(resource.data.clubId);
+      allow update: if 
+        (
+          managesClub(resource.data.clubId) && 
+          request.resource.data.clubId == resource.data.clubId && 
+          request.resource.data.studentId == resource.data.studentId
+        ) ||
+        isAdmin();
       allow delete: if isAdmin();
     }
 
