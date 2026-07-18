@@ -1,10 +1,11 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { RamLinkLogo } from "@/components/brand/ramlink-logo";
-import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth/auth-provider";
+import { logoutCurrentUser } from "@/lib/firebase/auth";
 
 export type WorkspaceNavItem = {
   label: string;
@@ -16,8 +17,27 @@ type WorkspaceShellProps = {
   children: React.ReactNode;
 };
 export function WorkspaceShell({ roleLabel, navItems, children }: WorkspaceShellProps) {
-  const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
+  const { profile } = useAuth();
+const [signingOut, setSigningOut] = useState(false);
+const initials =
+  profile?.displayName
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "RL";
+    async function handleSignOut() {
+      setSigningOut(true);
+
+      try {
+        await logoutCurrentUser();
+        router.push("/login");
+      } finally {
+        setSigningOut(false);
+      }
+    }
   return (
     <div className="min-h-screen bg-brand-surface text-brand-ink">
       <header className="sticky top-0 z-50 border-b border-brand-mist bg-white/92 backdrop-blur-xl">
