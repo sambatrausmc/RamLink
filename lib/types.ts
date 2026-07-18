@@ -17,6 +17,7 @@ export type RequestStatus = "pending" | "approved" | "rejected";
 export type NotificationStatus = "read" | "unread";
 export type InquiryStatus = "open" | "resolved";
 export type ReportStatus = "new" | "reviewing" | "dismissed" | "removed";
+export type ClubStatus = "pending" | "active" | "suspended" | "archived";
 export type ResourceType = "Form" | "Waiver" | "Guide" | "Link" | "Document";
 
 // The complete profile structure for a signed-in student
@@ -47,6 +48,7 @@ export type Club = {
   contactEmail: string;
   tags: string[];
   memberCount: number;
+  status?: ClubStatus;
   nextEventId?: string;
   isSuggested?: boolean;
   isSaved?: boolean;

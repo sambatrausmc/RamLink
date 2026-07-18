@@ -14,6 +14,7 @@ import type {
   Club,
   ClubCategory,
   ClubInquiry,
+  ClubStatus,
   EventItem,
   Interest,
   InquiryStatus,
@@ -108,6 +109,13 @@ function readReportStatus(value: unknown): ReportStatus {
   return "new";
 }
 
+function readClubStatus(value: unknown): ClubStatus {
+  if (value === "pending" || value === "suspended" || value === "archived") {
+    return value;
+  }
+  return "active";
+}
+
 function readUserRole(value: unknown): UserRole {
   if (value === "clubOfficer" || value === "admin") {
     return value;
@@ -129,6 +137,7 @@ function normalizeClub(snapshot: QueryDocumentSnapshot<DocumentData>): Club {
     contactEmail: readString(data.contactEmail),
     tags: readStringArray(data.tags),
     memberCount: readNumber(data.memberCount),
+    status: readClubStatus(data.status),
     nextEventId: readString(data.nextEventId) || undefined,
     isSuggested: readBoolean(data.isSuggested),
     isSaved: readBoolean(data.isSaved),
@@ -231,6 +240,7 @@ function normalizeInquiry(snapshot: QueryDocumentSnapshot<DocumentData>): ClubIn
         createdAt: readDate(reply?.createdAt),
       }))
     : [];
+
   return {
     id: snapshot.id,
     clubId: readString(data.clubId),
@@ -292,13 +302,20 @@ async function getCollection<T>(name: string, normalize: (snapshot: QueryDocumen
 
 // PUBLIC FETCHERS: These functions are called by Next.js server components and client pages
 export async function getClubs() {
+  const clubs = await getCollection(COLLECTIONS.clubs, normalizeClub);
+  return clubs.filter((club) => club.status === "active");
+}
+
+export async function getAllClubsForAdmin() {
   return getCollection(COLLECTIONS.clubs, normalizeClub);
 }
 
 export async function getClubByIdFromFirestore(clubId: string) {
   const db = await getDb();
   const snapshot = await getDoc(doc(db, COLLECTIONS.clubs, clubId));
-  return snapshot.exists() ? normalizeClub(snapshot as QueryDocumentSnapshot<DocumentData>) : null;
+  if (!snapshot.exists()) return null;
+  const club = normalizeClub(snapshot as QueryDocumentSnapshot<DocumentData>);
+  return club.status === "active" ? club : null;
 }
 
 export async function getInterests() {
