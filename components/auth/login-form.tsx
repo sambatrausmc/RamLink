@@ -1,51 +1,106 @@
 "use client";
-import { type FormEvent, useState } from "react";
+
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { LogIn } from "lucide-react";
-import { loginWithEmailAndPassword } from "@/lib/firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  loginWithEmailAndPassword,
+  resetPasswordForEmail,
+} from "@/lib/firebase/auth";
 
 export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
+    setFeedback("");
     setIsSubmitting(true);
+
     try {
       await loginWithEmailAndPassword({ email, password });
       router.push("/profile");
     } catch {
-      setError("Unable to sign in. Check your email and password, then try again.");
+      setFeedback(
+        "Unable to sign in. Check your email and password, then try again.",
+      );
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handlePasswordReset() {
+    if (!email.trim()) {
+      setFeedback(
+        "Enter your school email before requesting a password reset.",
+      );
+      return;
+    }
+
+    setIsResetting(true);
+    setFeedback("");
+
+    try {
+      await resetPasswordForEmail(email.trim());
+      setFeedback("Password reset email sent.");
+    } catch {
+      setFeedback("Unable to send a password reset email.");
+    } finally {
+      setIsResetting(false);
     }
   }
 
   return (
     <form className="mt-7 space-y-4" onSubmit={handleSubmit}>
       <label className="block">
-        <span className="text-sm font-semibold text-brand-ink">School email</span>
-        <Input className="mt-2" value={email} onChange={(event) => setEmail(event.target.value)} type="email" required />
+        <span className="text-sm font-semibold text-brand-ink">
+          School email
+        </span>
+
+        <Input
+          className="mt-2"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          type="email"
+          required
+        />
       </label>
+
       <label className="block">
         <span className="text-sm font-semibold text-brand-ink">Password</span>
-        <Input className="mt-2" value={password} onChange={(event) => setPassword(event.target.value)} type="password" required />
+
+        <Input
+          className="mt-2"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          type="password"
+          required
+        />
       </label>
-      <Link className="block text-right text-sm font-semibold text-brand-forest" href="/forgot-password">
-        Forgot password?
-      </Link>
-      {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
+
+      {feedback ? (
+        <p className="text-sm font-medium text-brand-forest">{feedback}</p>
+      ) : null}
+
       <Button className="w-full" type="submit" disabled={isSubmitting}>
         <LogIn className="h-4 w-4" />
         {isSubmitting ? "Signing in..." : "Sign In"}
       </Button>
+
+      <button
+        type="button"
+        className="w-full text-sm font-semibold text-brand-forest hover:underline"
+        onClick={handlePasswordReset}
+        disabled={isResetting}
+      >
+        {isResetting ? "Sending reset email..." : "Forgot password?"}
+      </button>
     </form>
   );
 }

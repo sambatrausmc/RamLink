@@ -3,6 +3,7 @@ import {
   arrayRemove,
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -50,6 +51,18 @@ export type CreateResourceInput = {
   type: ResourceType;
   url: string;
 };
+
+export type UpdateClubEventInput = Omit<
+  CreateClubEventInput,
+  "clubId" | "clubName"
+>;
+
+export type UpdateAnnouncementInput = Pick<
+  CreateAnnouncementInput,
+  "title" | "body" | "priority"
+>;
+
+export type UpdateResourceInput = Omit<CreateResourceInput, "clubId">;
 
 // Restricts club updates to specific editable profile fields
 export type UpdateClubProfileInput = Pick<
@@ -113,6 +126,22 @@ export async function createClubEvent(input: CreateClubEventInput) {
   });
 }
 
+export async function updateClubEvent(
+  eventId: string,
+  input: UpdateClubEventInput,
+) {
+  const db = await getDb();
+  await updateDoc(doc(db, COLLECTIONS.events, eventId), {
+    ...input,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteClubEvent(eventId: string) {
+  const db = await getDb();
+  await deleteDoc(doc(db, COLLECTIONS.events, eventId));
+}
+
 // Posts a new announcement and automatically notifies all existing club members
 export async function createClubAnnouncement(input: CreateAnnouncementInput) {
   const db = await getDb();
@@ -147,6 +176,22 @@ export async function createClubAnnouncement(input: CreateAnnouncementInput) {
   await batch.commit();
 }
 
+export async function updateClubAnnouncement(
+  announcementId: string,
+  input: UpdateAnnouncementInput,
+) {
+  const db = await getDb();
+  await updateDoc(doc(db, COLLECTIONS.announcements, announcementId), {
+    ...input,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteClubAnnouncement(announcementId: string) {
+  const db = await getDb();
+  await deleteDoc(doc(db, COLLECTIONS.announcements, announcementId));
+}
+
 // Uploads a new club resource link or document reference
 export async function createClubResource(input: CreateResourceInput) {
   const db = await getDb();
@@ -154,6 +199,22 @@ export async function createClubResource(input: CreateResourceInput) {
     ...input,
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function updateClubResource(
+  resourceId: string,
+  input: UpdateResourceInput,
+) {
+  const db = await getDb();
+  await updateDoc(doc(db, COLLECTIONS.resources, resourceId), {
+    ...input,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteClubResource(resourceId: string) {
+  const db = await getDb();
+  await deleteDoc(doc(db, COLLECTIONS.resources, resourceId));
 }
 
 // Updates basic club profile information
@@ -175,13 +236,11 @@ export async function updateJoinRequestStatus(
 ) {
   const db = await getDb();
   const requestRef = doc(db, COLLECTIONS.joinRequests, requestId);
+  const notificationRef = doc(collection(db, COLLECTIONS.notifications));
 
   await runTransaction(db, async (transaction) => {
-    // 1. Read inside the transaction so Firestore locks the state
     const requestSnapshot = await transaction.get(requestRef);
-    
-    // Safe-check added to protect against undefined Vitest mock snapshots
-    if (!requestSnapshot || !requestSnapshot.exists()) {
+    if (!requestSnapshot.exists()) {
       throw new Error("Join request not found.");
     }
 
@@ -190,10 +249,15 @@ export async function updateJoinRequestStatus(
     const clubId = String(request.clubId ?? "");
     const previousStatus = request.status as RequestStatus;
 
-    // 2. Update the status on the join request itself
-    transaction.update(requestRef, { status, updatedAt: serverTimestamp() });
+    if (!studentId || !clubId) {
+      throw new Error("Join request is missing membership information.");
+    }
 
-    // 3. If newly approved, add club to student's joined array and increment club member count
+    transaction.update(requestRef, {
+      status,
+      updatedAt: serverTimestamp(),
+    });
+
     if (status === "approved" && previousStatus !== "approved") {
       transaction.update(doc(db, COLLECTIONS.users, studentId), {
         joinedClubIds: arrayUnion(clubId),
@@ -202,9 +266,7 @@ export async function updateJoinRequestStatus(
       transaction.update(doc(db, COLLECTIONS.clubs, clubId), {
         memberCount: increment(1),
       });
-    } 
-    // 4. If revoking an approved membership, remove from array and decrement count
-    else if (status !== "approved" && previousStatus === "approved") {
+    } else if (status !== "approved" && previousStatus === "approved") {
       transaction.update(doc(db, COLLECTIONS.users, studentId), {
         joinedClubIds: arrayRemove(clubId),
         updatedAt: serverTimestamp(),
@@ -214,11 +276,13 @@ export async function updateJoinRequestStatus(
       });
     }
 
-    // 5. Send an unread system notification to the student
-    transaction.set(doc(collection(db, COLLECTIONS.notifications)), {
+    transaction.set(notificationRef, {
       userId: studentId,
       clubId,
-      title: status === "approved" ? "Club request approved" : "Club request updated",
+      title:
+        status === "approved"
+          ? "Club request approved"
+          : "Club request updated",
       body:
         status === "approved"
           ? "Your club membership request was approved."
@@ -236,9 +300,8 @@ export async function replyToInquiry(inquiryId: string, body: string) {
   const db = await getDb();
   const inquiryRef = doc(db, COLLECTIONS.inquiries, inquiryId);
   const snapshot = await getDoc(inquiryRef);
-  
-  // Safe-check added to protect against undefined Vitest mock snapshots
-  if (!snapshot || !snapshot.exists()) {
+
+  if (!snapshot.exists()) {
     throw new Error("Inquiry not found.");
   }
 
@@ -247,7 +310,6 @@ export async function replyToInquiry(inquiryId: string, body: string) {
   const reply = buildOfficerReply(existingReplies, body);
 
   const batch = writeBatch(db);
-  
   // Append reply and ensure inquiry status remains open
   batch.update(inquiryRef, {
     replies: [...existingReplies, reply],

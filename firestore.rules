@@ -1,6 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
     // Helper function to confirm user is authenticated
     function isSignedIn() {
       return request.auth != null;
@@ -38,16 +39,8 @@ service cloud.firestore {
     function managesClub(clubId) {
       return isAdmin() ||
         (isOfficer() &&
-        "managedClubIds" in userDoc().data &&
-        clubId in userDoc().data.managedClubIds);
-    }
-
-    // Confirms officer manages at least one club the target user has joined
-    function isOfficerOfMember(targetData) {
-      return isOfficer() &&
-        "managedClubIds" in userDoc().data &&
-        "joinedClubIds" in targetData &&
-        targetData.joinedClubIds.hasAny(userDoc().data.managedClubIds);
+          "managedClubIds" in userDoc().data &&
+          clubId in userDoc().data.managedClubIds);
     }
 
     // Restricts officer updates on student profiles to modifying only memberships of clubs they manage
@@ -57,11 +50,137 @@ service cloud.firestore {
       let newClubs = request.resource.data.joinedClubIds.toSet();
       let addedClubs = newClubs.difference(oldClubs);
       let removedClubs = oldClubs.difference(newClubs);
-
       return isOfficer() &&
         changedFields.hasOnly(["joinedClubIds", "updatedAt"]) &&
         addedClubs.hasOnly(userDoc().data.managedClubIds) &&
         removedClubs.hasOnly(userDoc().data.managedClubIds);
+    }
+
+    // Officers may only view students who belong to one of their managed clubs.
+    function officerCanReadManagedMember() {
+      return isOfficer() &&
+        resource.data.joinedClubIds.hasAny(userDoc().data.managedClubIds);
+    }
+
+    // Students may edit their profile and activity fields, but not roles or memberships.
+    function selfUpdatesAllowedProfileFields(userId) {
+      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+      return isSelf(userId) &&
+        request.resource.data.role == resource.data.role &&
+        changedFields.hasOnly([
+          "displayName",
+          "major",
+          "classYear",
+          "interests",
+          "savedClubIds",
+          "savedEventIds",
+          "updatedAt"
+        ]);
+    }
+
+    function studentUpdatesOwnRsvpProfile(userId) {
+      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+      let previousRsvps = resource.data.rsvpedEventIds.toSet();
+      let nextRsvps = request.resource.data.rsvpedEventIds.toSet();
+      let addedRsvps = nextRsvps.difference(previousRsvps);
+      let removedRsvps = previousRsvps.difference(nextRsvps);
+      let mutation = request.resource.data.rsvpMutation;
+      let eventPath = /databases/$(database)/documents/events/$(mutation.eventId);
+      return isSelf(userId) &&
+        "rsvpMutation" in request.resource.data &&
+        mutation.eventId is string &&
+        mutation.countChange in [-1, 1] &&
+        changedFields.hasOnly(["rsvpedEventIds", "rsvpMutation", "updatedAt"]) &&
+        exists(eventPath) &&
+        existsAfter(eventPath) &&
+        getAfter(eventPath).data.rsvpCount ==
+          get(eventPath).data.rsvpCount + mutation.countChange &&
+        (
+          (mutation.countChange == 1 &&
+            addedRsvps.hasOnly([mutation.eventId]) &&
+            addedRsvps.size() == 1 &&
+            removedRsvps.size() == 0) ||
+          (mutation.countChange == -1 &&
+            removedRsvps.hasOnly([mutation.eventId]) &&
+            removedRsvps.size() == 1 &&
+            addedRsvps.size() == 0)
+        );
+    }
+
+    function studentUpdatesOwnRsvp(eventId) {
+      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+      let previousRsvps = userDoc().data.rsvpedEventIds.toSet();
+      let nextUser = getAfter(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      );
+      let nextRsvps = nextUser.data.rsvpedEventIds.toSet();
+      let addedRsvps = nextRsvps.difference(previousRsvps);
+      let removedRsvps = previousRsvps.difference(nextRsvps);
+      let mutation = nextUser.data.rsvpMutation;
+      let countChange = request.resource.data.rsvpCount - resource.data.rsvpCount;
+      return isSignedIn() &&
+        "rsvpMutation" in nextUser.data &&
+        mutation.eventId == eventId &&
+        mutation.countChange == countChange &&
+        request.resource.data.rsvpCount >= 0 &&
+        changedFields.hasOnly(["rsvpCount", "updatedAt"]) &&
+        (
+          (countChange == 1 &&
+            addedRsvps.hasOnly([eventId]) &&
+            addedRsvps.size() == 1 &&
+            removedRsvps.size() == 0) ||
+          (countChange == -1 &&
+            removedRsvps.hasOnly([eventId]) &&
+            removedRsvps.size() == 1 &&
+            addedRsvps.size() == 0)
+        );
+    }
+
+    function validNewJoinRequest(requestId) {
+      let data = request.resource.data;
+      return isSignedIn() &&
+        data.keys().hasAll([
+          "clubId",
+          "clubName",
+          "studentId",
+          "studentName",
+          "message",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        data.keys().hasOnly([
+          "clubId",
+          "clubName",
+          "studentId",
+          "studentName",
+          "message",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        requestId == request.auth.uid + "_" + data.clubId &&
+        data.clubId is string &&
+        data.clubId.size() > 0 &&
+        data.clubName is string &&
+        data.studentId == request.auth.uid &&
+        data.studentName is string &&
+        data.message is string &&
+        data.status == "pending" &&
+        data.createdAt == request.time &&
+        data.updatedAt == request.time;
+    }
+
+    function studentReopensRejectedRequest(requestId) {
+      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+      return isSignedIn() &&
+        resource.data.studentId == request.auth.uid &&
+        request.resource.data.studentId == resource.data.studentId &&
+        request.resource.data.clubId == resource.data.clubId &&
+        requestId == request.auth.uid + "_" + resource.data.clubId &&
+        resource.data.status == "rejected" &&
+        request.resource.data.status == "pending" &&
+        changedFields.hasOnly(["message", "status", "createdAt", "updatedAt"]);
     }
 
     match /clubs/{clubId} {
@@ -72,19 +191,27 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if true;
       allow create: if managesClub(request.resource.data.clubId);
-      allow update, delete: if managesClub(resource.data.clubId);
+      allow update: if
+        (managesClub(resource.data.clubId) &&
+          request.resource.data.clubId == resource.data.clubId) ||
+        studentUpdatesOwnRsvp(eventId);
+      allow delete: if managesClub(resource.data.clubId);
     }
 
     match /announcements/{announcementId} {
       allow read: if true;
       allow create: if managesClub(request.resource.data.clubId);
-      allow update, delete: if managesClub(resource.data.clubId);
+      allow update: if managesClub(resource.data.clubId) &&
+        request.resource.data.clubId == resource.data.clubId;
+      allow delete: if managesClub(resource.data.clubId);
     }
 
     match /resources/{resourceId} {
       allow read: if true;
       allow create: if managesClub(request.resource.data.clubId);
-      allow update, delete: if managesClub(resource.data.clubId);
+      allow update: if managesClub(resource.data.clubId) &&
+        request.resource.data.clubId == resource.data.clubId;
+      allow delete: if managesClub(resource.data.clubId);
     }
 
     match /interests/{interestId} {
@@ -94,43 +221,45 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow create: if isSelf(userId) && request.resource.data.role == "student";
-      allow read: if isSelf(userId) || isAdmin() || isOfficerOfMember(resource.data);
+      allow read: if isSelf(userId) || isAdmin() || officerCanReadManagedMember();
       allow update: if
-        (
-          isSelf(userId) && 
-          request.resource.data.role == resource.data.role &&
-          request.resource.data.get("joinedClubIds", []) == resource.data.get("joinedClubIds", []) &&
-          request.resource.data.get("managedClubIds", []) == resource.data.get("managedClubIds", [])
-        ) ||
+        selfUpdatesAllowedProfileFields(userId) ||
+        studentUpdatesOwnRsvpProfile(userId) ||
         isAdmin() ||
         officerUpdatesManagedMembership();
       allow delete: if isAdmin();
     }
 
     match /joinRequests/{requestId} {
-      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow create: if validNewJoinRequest(requestId);
       allow read: if isSignedIn() &&
         (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
-      allow update: if (
-        managesClub(resource.data.clubId) &&
-        request.resource.data.clubId == resource.data.clubId &&
-        request.resource.data.studentId == resource.data.studentId
-      ) || isAdmin();
-      allow delete: if isAdmin();
+      allow update: if
+        (managesClub(resource.data.clubId) &&
+          request.resource.data.clubId == resource.data.clubId &&
+          request.resource.data.studentId == resource.data.studentId &&
+          request.resource.data.status in ["approved", "rejected"] &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["status", "updatedAt"])) ||
+        studentReopensRejectedRequest(requestId);
+      allow delete: if isAdmin() ||
+        (isSignedIn() &&
+          resource.data.studentId == request.auth.uid &&
+          resource.data.status == "pending");
     }
+
     match /inquiries/{inquiryId} {
-      allow read: if isSignedIn() && (
-        resource.data.studentId == request.auth.uid || 
-        managesClub(resource.data.clubId)
-      );
-      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
-      allow update: if 
-        (
-          managesClub(resource.data.clubId) && 
-          request.resource.data.clubId == resource.data.clubId && 
-          request.resource.data.studentId == resource.data.studentId
-        ) ||
-        isAdmin();
+      allow create: if isSignedIn() &&
+        request.resource.data.studentId == request.auth.uid &&
+        request.resource.data.status == "open";
+      allow read: if isSignedIn() &&
+        (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
+      allow update: if managesClub(resource.data.clubId) &&
+        request.resource.data.clubId == resource.data.clubId &&
+        request.resource.data.studentId == resource.data.studentId &&
+        request.resource.data.status in ["open", "resolved"] &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["replies", "status", "updatedAt"]);
       allow delete: if isAdmin();
     }
 
@@ -138,12 +267,13 @@ service cloud.firestore {
       // Allows self-notifications, admin alerts, or officer alerts sent from managed clubs
       allow create: if isSignedIn() &&
         (request.resource.data.userId == request.auth.uid ||
-        isAdmin() ||
-        ("clubId" in request.resource.data && managesClub(request.resource.data.clubId)));
+          isAdmin() ||
+          ("clubId" in request.resource.data && managesClub(request.resource.data.clubId)));
       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
       // Users can only mark their own notifications read/unread
       allow update: if isSignedIn() &&
         resource.data.userId == request.auth.uid &&
+        request.resource.data.status in ["read", "unread"] &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"]);
       allow delete: if isAdmin();
     }

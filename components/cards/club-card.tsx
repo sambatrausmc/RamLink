@@ -9,6 +9,7 @@ type ClubCardProps = {
   club: Club;
   showStatus?: boolean;
 };
+
 export function ClubCard({ club, showStatus = false }: ClubCardProps) {
   return (
     <Card className="overflow-hidden transition duration-200 hover:-translate-y-1 hover:shadow-lift">
@@ -17,12 +18,18 @@ export function ClubCard({ club, showStatus = false }: ClubCardProps) {
           <div className="grid h-12 w-12 place-items-center rounded-[13px] bg-brand-mist font-display text-sm font-semibold text-brand-forest">
             {club.shortName}
           </div>
-          {showStatus ? <StatusBadge status={club.membershipStatus ?? "notJoined"} /> : null}
+          {showStatus ? (
+            <StatusBadge status={club.membershipStatus ?? "notJoined"} />
+          ) : null}
         </div>
         <div className="mt-4">
           <p className="text-sm font-semibold text-brand-green">{club.category}</p>
-          <h2 className="mt-1 font-display text-xl font-semibold tracking-[-0.02em] text-brand-ink">{club.name}</h2>
-          <p className="mt-2 line-clamp-3 text-sm leading-6 text-brand-muted">{club.description}</p>
+          <h2 className="mt-1 font-display text-xl font-semibold tracking-[-0.02em] text-brand-ink">
+            {club.name}
+          </h2>
+          <p className="mt-2 line-clamp-3 text-sm leading-6 text-brand-muted">
+            {club.description}
+          </p>
         </div>
         <div className="mt-4 space-y-2 text-sm text-brand-muted">
           <p className="flex items-center gap-2">
