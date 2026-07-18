@@ -3,9 +3,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { useAuth } from "@/components/auth/auth-provider";
 import { RamLinkLogo } from "@/components/brand/ramlink-logo";
 import { cn } from "@/lib/utils";
-
 export type WorkspaceNavItem = {
   label: string;
   href: string;
@@ -15,9 +15,30 @@ type WorkspaceShellProps = {
   navItems: WorkspaceNavItem[];
   children: React.ReactNode;
 };
-export function WorkspaceShell({ roleLabel, navItems, children }: WorkspaceShellProps) {
+export function getAccountInitials(displayName: string) {
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((namePart) => namePart[0])
+    .join("")
+    .toUpperCase();
+  return initials || "RL";
+}
+export function WorkspaceShell({
+  roleLabel,
+  navItems,
+  children,
+}: WorkspaceShellProps) {
   const pathname = usePathname();
+  const { profile, user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const displayName =
+    profile?.displayName ||
+    user?.displayName ||
+    user?.email ||
+    "RamLink account";
+  const initials = getAccountInitials(displayName);
   return (
     <div className="min-h-screen bg-brand-surface text-brand-ink">
       <header className="sticky top-0 z-50 border-b border-brand-mist bg-white/92 backdrop-blur-xl">
@@ -28,16 +49,23 @@ export function WorkspaceShell({ roleLabel, navItems, children }: WorkspaceShell
               {roleLabel}
             </span>
           </div>
-          <nav className="hidden items-center gap-1 lg:flex" aria-label={`${roleLabel} navigation`}>
+          <nav
+            className="hidden items-center gap-1 lg:flex"
+            aria-label={`${roleLabel} navigation`}
+          >
             {navItems.map((item) => {
-              const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+              const active =
+                pathname === item.href ||
+                (item.href !== "/" && pathname.startsWith(`${item.href}/`));
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
                     "rounded-lg px-3 py-2 text-sm font-semibold transition",
-                    active ? "bg-brand-mist text-brand-forest" : "text-brand-muted hover:bg-brand-surface hover:text-brand-forest",
+                    active
+                      ? "bg-brand-mist text-brand-forest"
+                      : "text-brand-muted hover:bg-brand-surface hover:text-brand-forest",
                   )}
                 >
                   {item.label}
@@ -46,11 +74,18 @@ export function WorkspaceShell({ roleLabel, navItems, children }: WorkspaceShell
             })}
           </nav>
           <div className="flex items-center gap-2">
-            <Link href="/homepage" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-brand-muted transition hover:bg-brand-surface hover:text-brand-forest md:inline-flex">
+            <Link
+              href="/homepage"
+              className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-brand-muted transition hover:bg-brand-surface
+hover:text-brand-forest md:inline-flex"
+            >
               Public Site
             </Link>
-            <span className="hidden h-9 w-9 place-items-center rounded-full bg-brand-forest text-sm font-bold text-white md:grid">
-              SB
+            <span
+              className="hidden h-9 w-9 place-items-center rounded-full bg-brand-forest text-sm font-bold text-white md:grid"
+              title={displayName}
+            >
+              {initials}
             </span>
             <button
               type="button"
@@ -59,7 +94,11 @@ export function WorkspaceShell({ roleLabel, navItems, children }: WorkspaceShell
               className="grid h-10 w-10 place-items-center rounded-[10px] border border-brand-mist bg-white text-brand-ink lg:hidden"
               onClick={() => setMenuOpen((value) => !value)}
             >
-              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {menuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
             </button>
           </div>
         </div>
@@ -67,7 +106,9 @@ export function WorkspaceShell({ roleLabel, navItems, children }: WorkspaceShell
           <div className="border-t border-brand-mist bg-white px-5 py-3 lg:hidden">
             <div className="mx-auto grid w-full max-w-[1180px] gap-1">
               {navItems.map((item) => {
-                const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+                const active =
+                  pathname === item.href ||
+                  (item.href !== "/" && pathname.startsWith(`${item.href}/`));
                 return (
                   <Link
                     key={item.href}
@@ -75,14 +116,20 @@ export function WorkspaceShell({ roleLabel, navItems, children }: WorkspaceShell
                     onClick={() => setMenuOpen(false)}
                     className={cn(
                       "rounded-lg px-3 py-2.5 text-sm font-semibold transition",
-                      active ? "bg-brand-mist text-brand-forest" : "text-brand-muted hover:bg-brand-surface hover:text-brand-forest",
+                      active
+                        ? "bg-brand-mist text-brand-forest"
+                        : "text-brand-muted hover:bg-brand-surface hover:text-brand-forest",
                     )}
                   >
                     {item.label}
                   </Link>
                 );
               })}
-              <Link href="/homepage" className="rounded-lg px-3 py-2.5 text-sm font-semibold text-brand-muted hover:bg-brand-surface hover:text-brand-forest" onClick={() => setMenuOpen(false)}>
+              <Link
+                href="/homepage"
+                className="rounded-lg px-3 py-2.5 text-sm font-semibold text-brand-muted hover:bg-brand-surface hover:text-brandforest"
+                onClick={() => setMenuOpen(false)}
+              >
                 Public Site
               </Link>
             </div>
