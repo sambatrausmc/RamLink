@@ -248,6 +248,7 @@ export async function createJoinRequest(
     message: input.message,
     status: "pending" as RequestStatus,
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
 
   const requestRef = doc(
@@ -267,7 +268,20 @@ export async function createJoinRequest(
       throw new Error("An active join request already exists for this club.");
     }
 
-    transaction.set(requestRef, request);
+    if (currentRequest.exists()) {
+      if (currentRequest.data().status !== "rejected") {
+        throw new Error("This join request cannot be resubmitted.");
+      }
+      transaction.update(requestRef, {
+        message: request.message,
+        status: request.status,
+        createdAt: request.createdAt,
+        updatedAt: request.updatedAt,
+      });
+    } else {
+      transaction.set(requestRef, request);
+    }
+
     transaction.set(notificationRef, {
       userId: input.userId,
       clubId: input.clubId,

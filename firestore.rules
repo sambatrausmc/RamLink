@@ -136,6 +136,53 @@ service cloud.firestore {
         );
     }
 
+    function validNewJoinRequest(requestId) {
+      let data = request.resource.data;
+      return isSignedIn() &&
+        data.keys().hasAll([
+          "clubId",
+          "clubName",
+          "studentId",
+          "studentName",
+          "message",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        data.keys().hasOnly([
+          "clubId",
+          "clubName",
+          "studentId",
+          "studentName",
+          "message",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        requestId == request.auth.uid + "_" + data.clubId &&
+        data.clubId is string &&
+        data.clubId.size() > 0 &&
+        data.clubName is string &&
+        data.studentId == request.auth.uid &&
+        data.studentName is string &&
+        data.message is string &&
+        data.status == "pending" &&
+        data.createdAt == request.time &&
+        data.updatedAt == request.time;
+    }
+
+    function studentReopensRejectedRequest(requestId) {
+      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+      return isSignedIn() &&
+        resource.data.studentId == request.auth.uid &&
+        request.resource.data.studentId == resource.data.studentId &&
+        request.resource.data.clubId == resource.data.clubId &&
+        requestId == request.auth.uid + "_" + resource.data.clubId &&
+        resource.data.status == "rejected" &&
+        request.resource.data.status == "pending" &&
+        changedFields.hasOnly(["message", "status", "createdAt", "updatedAt"]);
+    }
+
     match /clubs/{clubId} {
       allow read: if true;
       allow create, update, delete: if managesClub(clubId);
@@ -184,17 +231,17 @@ service cloud.firestore {
     }
 
     match /joinRequests/{requestId} {
-      allow create: if isSignedIn() &&
-        request.resource.data.studentId == request.auth.uid &&
-        request.resource.data.status == "pending";
+      allow create: if validNewJoinRequest(requestId);
       allow read: if isSignedIn() &&
         (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
-      allow update: if managesClub(resource.data.clubId) &&
-        request.resource.data.clubId == resource.data.clubId &&
-        request.resource.data.studentId == resource.data.studentId &&
-        request.resource.data.status in ["approved", "rejected"] &&
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(["status", "updatedAt"]);
+      allow update: if
+        (managesClub(resource.data.clubId) &&
+          request.resource.data.clubId == resource.data.clubId &&
+          request.resource.data.studentId == resource.data.studentId &&
+          request.resource.data.status in ["approved", "rejected"] &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["status", "updatedAt"])) ||
+        studentReopensRejectedRequest(requestId);
       allow delete: if isAdmin() ||
         (isSignedIn() &&
           resource.data.studentId == request.auth.uid &&
@@ -226,6 +273,7 @@ service cloud.firestore {
       // Users can only mark their own notifications read/unread
       allow update: if isSignedIn() &&
         resource.data.userId == request.auth.uid &&
+        request.resource.data.status in ["read", "unread"] &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"]);
       allow delete: if isAdmin();
     }
