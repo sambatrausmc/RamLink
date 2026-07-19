@@ -1,5 +1,6 @@
 import { RoleGate } from "@/components/auth/role-gate";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
+import { requireWorkspaceRole } from "@/lib/server/workspace-authorization";
 
 const clubNav = [
   { label: "Home", href: "/club/homepage" },
@@ -12,7 +13,9 @@ const clubNav = [
   { label: "Profile", href: "/club/profile" },
 ];
 
-export default function ClubLayout({ children }: { children: React.ReactNode }) {
+export default async function ClubLayout({ children }: { children: React.ReactNode }) {
+  await requireWorkspaceRole(["clubOfficer", "admin"], "/club/homepage");
+
   return (
     <WorkspaceShell roleLabel="Club Officer Mode" navItems={clubNav}>
       <RoleGate allowedRoles={["clubOfficer", "admin"]}>{children}</RoleGate>

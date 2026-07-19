@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 
 export function RegisterForm() {
   const router = useRouter();
-  const { loading, profile, user } = useAuth();
+  const { loading, profile, sessionState, user } = useAuth();
 
   // Track all three input fields
   const [displayName, setDisplayName] = useState("");
@@ -23,11 +23,14 @@ export function RegisterForm() {
 
   useEffect(() => {
     if (!loading && user) {
+      if (user.emailVerified && sessionState !== "ready") {
+        return;
+      }
       router.replace(
         user.emailVerified ? getWorkspaceHref(profile?.role) : "/verify-email",
       );
     }
-  }, [loading, profile?.role, router, user]);
+  }, [loading, profile?.role, router, sessionState, user]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
