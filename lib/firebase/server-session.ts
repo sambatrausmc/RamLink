@@ -55,3 +55,16 @@ export async function createServerSession(user: User) {
     throw new Error("Sign in again to create a secure RamLink session.");
   }
 }
+
+export async function clearServerSession() {
+  const csrfToken = await getCsrfToken();
+  const response = await fetch("/api/auth/session", {
+    method: "DELETE",
+    credentials: "same-origin",
+    headers: { [CSRF_HEADER_NAME]: csrfToken },
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to clear the secure RamLink session.");
+  }
+}

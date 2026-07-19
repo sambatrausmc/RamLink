@@ -9,7 +9,10 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { requireFarmingdaleEmail } from "@/lib/auth-email-policy";
-import { createServerSession } from "@/lib/firebase/server-session";
+import {
+  clearServerSession,
+  createServerSession,
+} from "@/lib/firebase/server-session";
 export type RegisterStudentInput = {
   displayName: string;
   email: string;
@@ -90,6 +93,7 @@ export async function loginWithEmailAndPassword(input: LoginInput) {
 }
 export async function logoutCurrentUser() {
   const auth = await getAuthClient();
+  await clearServerSession();
   await signOut(auth);
 }
 export async function resetPasswordForEmail(email: string) {

@@ -11,6 +11,7 @@ vi.mock("firebase/auth", () => ({
 }));
 
 import {
+  clearServerSession,
   createServerSession,
   readServerSession,
 } from "@/lib/firebase/server-session";
@@ -75,5 +76,27 @@ describe("Firebase client and server session requests", () => {
     );
 
     await expect(readServerSession()).resolves.toBeNull();
+  });
+
+  it("clears the server session with fresh CSRF proof", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue({ csrfToken: "csrf-token" }),
+      })
+      .mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await clearServerSession();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/auth/session",
+      expect.objectContaining({
+        method: "DELETE",
+        headers: { [CSRF_HEADER_NAME]: "csrf-token" },
+      }),
+    );
   });
 });
