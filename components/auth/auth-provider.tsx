@@ -12,9 +12,12 @@ import {
 import type { User } from "firebase/auth";
 import type { StudentProfile } from "@/lib/types";
 
+export type ProfileStatus = "loading" | "ready" | "missing" | "error";
+
 type AuthContextValue = {
   user: User | null;
   profile: StudentProfile | null;
+  profileStatus: ProfileStatus;
   loading: boolean;
   refreshProfile: () => Promise<void>;
 };
@@ -22,6 +25,7 @@ type AuthContextValue = {
 const defaultAuthContext: AuthContextValue = {
   user: null,
   profile: null,
+  profileStatus: "missing",
   loading: false,
   refreshProfile: async () => {},
 };
@@ -31,20 +35,42 @@ const AuthContext = createContext<AuthContextValue>(defaultAuthContext);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [profileStatus, setProfileStatus] =
+    useState<ProfileStatus>("loading");
   const [loading, setLoading] = useState(true);
 
   // Keep the Firebase Auth session and the matching Firestore user profile together.
   const loadProfile = useCallback(async (nextUser: User | null) => {
     if (!nextUser) {
       setProfile(null);
+      setProfileStatus("missing");
       return;
     }
+    if (!nextUser.emailVerified) {
+      setProfile(null);
+      setProfileStatus("missing");
+      return;
+    }
+    setProfileStatus("loading");
     try {
-      const { getStudentProfile } = await import("@/lib/firebase/user-profile");
+      const { ensureStudentProfile, getStudentProfile } = await import(
+        "@/lib/firebase/user-profile"
+      );
       const nextProfile = await getStudentProfile(nextUser.uid);
-      setProfile(nextProfile);
+      if (nextProfile) {
+        setProfile(nextProfile);
+        setProfileStatus("ready");
+        return;
+      }
+
+      setProfile(null);
+      setProfileStatus("missing");
+      const recoveredProfile = await ensureStudentProfile(nextUser);
+      setProfile(recoveredProfile);
+      setProfileStatus("ready");
     } catch {
       setProfile(null);
+      setProfileStatus("error");
     }
   }, []);
 
@@ -80,8 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   const value = useMemo(
-    () => ({ user, profile, loading, refreshProfile }),
-    [loading, profile, refreshProfile, user],
+    () => ({ user, profile, profileStatus, loading, refreshProfile }),
+    [loading, profile, profileStatus, refreshProfile, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

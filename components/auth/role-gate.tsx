@@ -11,7 +11,7 @@ type RoleGateProps = {
 };
 
 export function RoleGate({ allowedRoles, children }: RoleGateProps) {
-  const { loading, profile, user } = useAuth();
+  const { loading, profile, profileStatus, refreshProfile, user } = useAuth();
   const role = profile?.role ?? "student";
 
   // Show a loading card while Firebase verifies authentication status
@@ -61,6 +61,41 @@ export function RoleGate({ allowedRoles, children }: RoleGateProps) {
           >
             Verify account
           </Link>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (profileStatus === "loading" || profileStatus === "missing") {
+    return (
+      <Card>
+        <CardContent>
+          <p className="text-sm text-brand-muted">
+            Preparing your RamLink profile...
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (profileStatus === "error") {
+    return (
+      <Card>
+        <CardContent>
+          <h1 className="font-display text-2xl font-semibold text-brand-ink">
+            Profile unavailable
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-brand-muted">
+            RamLink could not load your account data. Your placeholder profile
+            was not displayed.
+          </p>
+          <button
+            type="button"
+            onClick={() => void refreshProfile()}
+            className="mt-5 text-sm font-semibold text-brand-forest hover:underline"
+          >
+            Try again
+          </button>
         </CardContent>
       </Card>
     );
