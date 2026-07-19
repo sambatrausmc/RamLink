@@ -6,7 +6,10 @@ const mocks = vi.hoisted(() => ({
   auth: { name: "ramlink-auth" },
   createUser: vi.fn(),
   ensurePersistence: vi.fn(),
+  getIdToken: vi.fn(),
+  resetPassword: vi.fn(),
   sendVerification: vi.fn(),
+  signIn: vi.fn(),
   updateProfile: vi.fn(),
   user: {
     uid: "student-1",
@@ -17,9 +20,11 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("firebase/auth", () => ({
   createUserWithEmailAndPassword: mocks.createUser,
+  getIdToken: mocks.getIdToken,
+  reload: vi.fn(),
   sendEmailVerification: mocks.sendVerification,
-  sendPasswordResetEmail: vi.fn(),
-  signInWithEmailAndPassword: vi.fn(),
+  sendPasswordResetEmail: mocks.resetPassword,
+  signInWithEmailAndPassword: mocks.signIn,
   signOut: vi.fn(),
   updateProfile: mocks.updateProfile,
 }));
@@ -36,6 +41,7 @@ describe("verified student registration", () => {
     mocks.createUser.mockResolvedValue({ user: mocks.user });
     mocks.updateProfile.mockResolvedValue(undefined);
     mocks.sendVerification.mockResolvedValue(undefined);
+    mocks.signIn.mockResolvedValue({ user: mocks.user });
   });
 
   it("normalizes the school email and sends a verification link", async () => {
@@ -90,5 +96,39 @@ describe("verified student registration", () => {
         password: "password123",
       }),
     ).rejects.toThrow("Verification service unavailable");
+  });
+
+  it("normalizes login and password-reset addresses", async () => {
+    const { loginWithEmailAndPassword, resetPasswordForEmail } = await import(
+      "@/lib/firebase/auth"
+    );
+
+    await loginWithEmailAndPassword({
+      email: " Student@Farmingdale.edu ",
+      password: "password123",
+    });
+    await resetPasswordForEmail(" Student@Farmingdale.edu ");
+
+    expect(mocks.signIn).toHaveBeenCalledWith(
+      mocks.auth,
+      "student@farmingdale.edu",
+      "password123",
+    );
+    expect(mocks.resetPassword).toHaveBeenCalledWith(
+      mocks.auth,
+      "student@farmingdale.edu",
+    );
+  });
+
+  it("rejects unsupported login domains before Firebase authentication", async () => {
+    const { loginWithEmailAndPassword } = await import("@/lib/firebase/auth");
+
+    await expect(
+      loginWithEmailAndPassword({
+        email: "student@example.com",
+        password: "password123",
+      }),
+    ).rejects.toThrow("Use a valid @farmingdale.edu email address.");
+    expect(mocks.signIn).not.toHaveBeenCalled();
   });
 });

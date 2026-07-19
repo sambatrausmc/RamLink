@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  getIdToken,
   reload,
   sendEmailVerification,
   sendPasswordResetEmail,
@@ -51,9 +52,10 @@ export async function registerStudentAccount(input: RegisterStudentInput) {
 
 export async function resendCurrentUserVerification() {
   const auth = await getAuthClient();
-  if (!auth.currentUser) {
+  if (!auth.currentUser?.email) {
     throw new Error("Sign in before requesting another verification email.");
   }
+  requireFarmingdaleEmail(auth.currentUser.email);
   await sendEmailVerification(
     auth.currentUser,
     getVerificationActionSettings(),
@@ -66,13 +68,17 @@ export async function reloadCurrentUser() {
     return null;
   }
   await reload(auth.currentUser);
+  if (auth.currentUser.emailVerified) {
+    await getIdToken(auth.currentUser, true);
+  }
   return auth.currentUser;
 }
 export async function loginWithEmailAndPassword(input: LoginInput) {
+  const email = requireFarmingdaleEmail(input.email);
   const auth = await getAuthClient();
   const credential = await signInWithEmailAndPassword(
     auth,
-    input.email,
+    email,
     input.password,
   );
   return credential.user;
@@ -83,5 +89,5 @@ export async function logoutCurrentUser() {
 }
 export async function resetPasswordForEmail(email: string) {
   const auth = await getAuthClient();
-  await sendPasswordResetEmail(auth, email);
+  await sendPasswordResetEmail(auth, requireFarmingdaleEmail(email));
 }
