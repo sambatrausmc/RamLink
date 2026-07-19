@@ -7,7 +7,7 @@ import { LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getWorkspaceHref } from "@/lib/auth-navigation";
+import { getSafeNextPath, getWorkspaceHref } from "@/lib/auth-navigation";
 import { loginWithEmailAndPassword } from "@/lib/firebase/auth";
 
 export function LoginForm() {
@@ -18,12 +18,21 @@ export function LoginForm() {
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  function getRequestedWorkspace() {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    return getSafeNextPath(
+      new URLSearchParams(window.location.search).get("next"),
+    );
+  }
+
   useEffect(() => {
     if (!loading && user && sessionState !== "error") {
       router.replace(
         user.emailVerified === false
           ? "/verify-email"
-          : getWorkspaceHref(profile?.role),
+          : getRequestedWorkspace() ?? getWorkspaceHref(profile?.role),
       );
     }
   }, [loading, profile?.role, router, sessionState, user]);
@@ -38,7 +47,11 @@ export function LoginForm() {
       if (nextUser.emailVerified) {
         await refreshSession();
       }
-      router.push(nextUser.emailVerified ? "/dashboard" : "/verify-email");
+      router.push(
+        nextUser.emailVerified
+          ? getRequestedWorkspace() ?? "/dashboard"
+          : "/verify-email",
+      );
     } catch {
       setFeedback(
         "Unable to sign in. Check your email and password, then try again.",
