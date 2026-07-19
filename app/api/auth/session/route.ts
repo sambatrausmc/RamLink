@@ -2,12 +2,47 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebase/admin";
 import { CSRF_COOKIE_NAME, verifyCsrfRequest } from "@/lib/server/csrf";
 import {
+  getExpiredSessionCookieOptions,
   getSessionCookieOptions,
   hasRecentAuthentication,
   hasVerifiedFarmingdaleClaims,
   SESSION_COOKIE_NAME,
   SESSION_LIFETIME_SECONDS,
 } from "@/lib/server/session-cookie";
+
+function clearSessionCookie(response: NextResponse) {
+  response.cookies.set(
+    SESSION_COOKIE_NAME,
+    "",
+    getExpiredSessionCookieOptions(),
+  );
+  return response;
+}
+
+export async function GET(request: NextRequest) {
+  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (!sessionCookie) {
+    return NextResponse.json({ authenticated: false }, { status: 401 });
+  }
+
+  try {
+    const decodedToken = await getAdminAuth().verifySessionCookie(
+      sessionCookie,
+      true,
+    );
+    if (!hasVerifiedFarmingdaleClaims(decodedToken)) {
+      return clearSessionCookie(
+        NextResponse.json({ authenticated: false }, { status: 401 }),
+      );
+    }
+
+    return NextResponse.json({ authenticated: true, uid: decodedToken.uid });
+  } catch {
+    return clearSessionCookie(
+      NextResponse.json({ authenticated: false }, { status: 401 }),
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   if (
@@ -57,4 +92,19 @@ export async function POST(request: NextRequest) {
       { status: 401 },
     );
   }
+}
+
+export async function DELETE(request: NextRequest) {
+  if (
+    !verifyCsrfRequest(
+      request,
+      request.cookies.get(CSRF_COOKIE_NAME)?.value,
+    )
+  ) {
+    return NextResponse.json({ error: "Invalid request token." }, { status: 403 });
+  }
+
+  return clearSessionCookie(
+    NextResponse.json({ authenticated: false }),
+  );
 }
