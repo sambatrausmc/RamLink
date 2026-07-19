@@ -25,6 +25,13 @@ export function getSafeNextPath(value: string | null | undefined) {
     if (parsedUrl.origin !== "https://ramlink.local") {
       return null;
     }
+    if (
+      ["/forgot-password", "/login", "/register", "/verify-email"].includes(
+        parsedUrl.pathname,
+      )
+    ) {
+      return null;
+    }
     return `${parsedUrl.pathname}${parsedUrl.search}`;
   } catch {
     return null;

@@ -10,6 +10,13 @@ import {
   SESSION_LIFETIME_SECONDS,
 } from "@/lib/server/session-cookie";
 
+function sessionResponse(body: object, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
 function clearSessionCookie(response: NextResponse) {
   response.cookies.set(
     SESSION_COOKIE_NAME,
@@ -22,7 +29,7 @@ function clearSessionCookie(response: NextResponse) {
 export async function GET(request: NextRequest) {
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionCookie) {
-    return NextResponse.json({ authenticated: false }, { status: 401 });
+    return sessionResponse({ authenticated: false }, 401);
   }
 
   try {
@@ -32,14 +39,14 @@ export async function GET(request: NextRequest) {
     );
     if (!hasVerifiedFarmingdaleClaims(decodedToken)) {
       return clearSessionCookie(
-        NextResponse.json({ authenticated: false }, { status: 401 }),
+        sessionResponse({ authenticated: false }, 401),
       );
     }
 
-    return NextResponse.json({ authenticated: true, uid: decodedToken.uid });
+    return sessionResponse({ authenticated: true, uid: decodedToken.uid });
   } catch {
     return clearSessionCookie(
-      NextResponse.json({ authenticated: false }, { status: 401 }),
+      sessionResponse({ authenticated: false }, 401),
     );
   }
 }
@@ -51,12 +58,12 @@ export async function POST(request: NextRequest) {
       request.cookies.get(CSRF_COOKIE_NAME)?.value,
     )
   ) {
-    return NextResponse.json({ error: "Invalid request token." }, { status: 403 });
+    return sessionResponse({ error: "Invalid request token." }, 403);
   }
 
   const body = await request.json().catch(() => null);
   if (!body || typeof body.idToken !== "string" || !body.idToken) {
-    return NextResponse.json({ error: "An ID token is required." }, { status: 400 });
+    return sessionResponse({ error: "An ID token is required." }, 400);
   }
 
   try {
@@ -64,22 +71,19 @@ export async function POST(request: NextRequest) {
     const decodedToken = await auth.verifyIdToken(body.idToken, true);
 
     if (!hasVerifiedFarmingdaleClaims(decodedToken)) {
-      return NextResponse.json(
+      return sessionResponse(
         { error: "A verified Farmingdale account is required." },
-        { status: 403 },
+        403,
       );
     }
     if (!hasRecentAuthentication(decodedToken)) {
-      return NextResponse.json(
-        { error: "A recent sign-in is required." },
-        { status: 401 },
-      );
+      return sessionResponse({ error: "A recent sign-in is required." }, 401);
     }
 
     const sessionCookie = await auth.createSessionCookie(body.idToken, {
       expiresIn: SESSION_LIFETIME_SECONDS * 1000,
     });
-    const response = NextResponse.json({ authenticated: true });
+    const response = sessionResponse({ authenticated: true });
     response.cookies.set(
       SESSION_COOKIE_NAME,
       sessionCookie,
@@ -87,10 +91,7 @@ export async function POST(request: NextRequest) {
     );
     return response;
   } catch {
-    return NextResponse.json(
-      { error: "Unable to create the session." },
-      { status: 401 },
-    );
+    return sessionResponse({ error: "Unable to create the session." }, 401);
   }
 }
 
@@ -101,10 +102,10 @@ export async function DELETE(request: NextRequest) {
       request.cookies.get(CSRF_COOKIE_NAME)?.value,
     )
   ) {
-    return NextResponse.json({ error: "Invalid request token." }, { status: 403 });
+    return sessionResponse({ error: "Invalid request token." }, 403);
   }
 
   return clearSessionCookie(
-    NextResponse.json({ authenticated: false }),
+    sessionResponse({ authenticated: false }),
   );
 }

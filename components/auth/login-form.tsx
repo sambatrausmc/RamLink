@@ -28,7 +28,10 @@ export function LoginForm() {
   }
 
   useEffect(() => {
-    if (!loading && user && sessionState !== "error") {
+    if (!loading && user) {
+      if (user.emailVerified && sessionState !== "ready") {
+        return;
+      }
       router.replace(
         user.emailVerified === false
           ? "/verify-email"

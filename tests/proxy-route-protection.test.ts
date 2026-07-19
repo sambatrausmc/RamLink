@@ -54,6 +54,8 @@ describe("protected workspace proxy", () => {
     ["https://attacker.example", null],
     ["//attacker.example/path", null],
     ["/\\attacker.example", null],
+    ["/login?next=/dashboard", null],
+    ["/verify-email", null],
     ["/dashboard?tab=events", "/dashboard?tab=events"],
   ])("sanitizes a requested destination", (value, expected) => {
     expect(getSafeNextPath(value)).toBe(expected);
