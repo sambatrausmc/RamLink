@@ -9,6 +9,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { requireFarmingdaleEmail } from "@/lib/auth-email-policy";
+import { createServerSession } from "@/lib/firebase/server-session";
 export type RegisterStudentInput = {
   displayName: string;
   email: string;
@@ -70,6 +71,7 @@ export async function reloadCurrentUser() {
   await reload(auth.currentUser);
   if (auth.currentUser.emailVerified) {
     await getIdToken(auth.currentUser, true);
+    await createServerSession(auth.currentUser);
   }
   return auth.currentUser;
 }
@@ -81,6 +83,9 @@ export async function loginWithEmailAndPassword(input: LoginInput) {
     email,
     input.password,
   );
+  if (credential.user.emailVerified) {
+    await createServerSession(credential.user);
+  }
   return credential.user;
 }
 export async function logoutCurrentUser() {

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   auth: { name: "ramlink-auth" },
   createUser: vi.fn(),
+  createServerSession: vi.fn(),
   ensurePersistence: vi.fn(),
   getIdToken: vi.fn(),
   resetPassword: vi.fn(),
@@ -15,7 +16,12 @@ const mocks = vi.hoisted(() => ({
     uid: "student-1",
     email: "student@farmingdale.edu",
     displayName: null,
+    emailVerified: false,
   },
+}));
+
+vi.mock("@/lib/firebase/server-session", () => ({
+  createServerSession: mocks.createServerSession,
 }));
 
 vi.mock("firebase/auth", () => ({
@@ -42,6 +48,8 @@ describe("verified student registration", () => {
     mocks.updateProfile.mockResolvedValue(undefined);
     mocks.sendVerification.mockResolvedValue(undefined);
     mocks.signIn.mockResolvedValue({ user: mocks.user });
+    mocks.createServerSession.mockResolvedValue(undefined);
+    mocks.user.emailVerified = false;
   });
 
   it("normalizes the school email and sends a verification link", async () => {
@@ -118,6 +126,18 @@ describe("verified student registration", () => {
       mocks.auth,
       "student@farmingdale.edu",
     );
+  });
+
+  it("creates a server session after verified login", async () => {
+    mocks.user.emailVerified = true;
+    const { loginWithEmailAndPassword } = await import("@/lib/firebase/auth");
+
+    await loginWithEmailAndPassword({
+      email: "student@farmingdale.edu",
+      password: "password123",
+    });
+
+    expect(mocks.createServerSession).toHaveBeenCalledWith(mocks.user);
   });
 
   it("rejects unsupported login domains before Firebase authentication", async () => {

@@ -1,7 +1,10 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  CSRF_COOKIE_NAME,
+  CSRF_HEADER_NAME,
+} from "@/lib/auth-session-contract";
 
-export const CSRF_COOKIE_NAME = "ramlink_csrf";
-export const CSRF_HEADER_NAME = "x-ramlink-csrf";
+export { CSRF_COOKIE_NAME, CSRF_HEADER_NAME };
 
 const csrfLifetimeSeconds = 60 * 60;
 

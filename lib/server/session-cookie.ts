@@ -1,7 +1,8 @@
 import type { DecodedIdToken } from "firebase-admin/auth";
 import { isFarmingdaleEmail } from "@/lib/auth-email-policy";
+import { SESSION_COOKIE_NAME } from "@/lib/auth-session-contract";
 
-export const SESSION_COOKIE_NAME = "ramlink_session";
+export { SESSION_COOKIE_NAME };
 export const SESSION_LIFETIME_SECONDS = 60 * 60 * 24 * 5;
 
 const recentSignInSeconds = 5 * 60;
