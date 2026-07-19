@@ -23,7 +23,9 @@ export function RegisterForm() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace(getWorkspaceHref(profile?.role));
+      router.replace(
+        user.emailVerified ? getWorkspaceHref(profile?.role) : "/verify-email",
+      );
     }
   }, [loading, profile?.role, router, user]);
 

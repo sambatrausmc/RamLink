@@ -45,6 +45,27 @@ export function RoleGate({ allowedRoles, children }: RoleGateProps) {
     );
   }
 
+  if (user.emailVerified === false) {
+    return (
+      <Card>
+        <CardContent>
+          <h1 className="font-display text-2xl font-semibold text-brand-ink">
+            Verify your school email
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-brand-muted">
+            Confirm your Farmingdale email before opening a RamLink workspace.
+          </p>
+          <Link
+            href="/verify-email"
+            className="mt-5 inline-flex h-11 items-center justify-center rounded-[11px] bg-brand-forest px-4 text-sm font-semibold leading-none text-white transition hover:bg-brand-forestDark"
+          >
+            Verify account
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Restrict access if the user's assigned role is not included in the allowedRoles array
   if (!allowedRoles.includes(role)) {
     return (

@@ -27,7 +27,13 @@ export function SessionAwareLink({
   return (
     <Link
       className={className}
-      href={user ? getWorkspaceHref(profile?.role) : signedOutHref}
+      href={
+        user
+          ? user.emailVerified === false
+            ? "/verify-email"
+            : getWorkspaceHref(profile?.role)
+          : signedOutHref
+      }
     >
       {user ? signedInContent : signedOutContent}
     </Link>

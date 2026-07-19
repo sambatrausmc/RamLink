@@ -20,7 +20,11 @@ export function LoginForm() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace(getWorkspaceHref(profile?.role));
+      router.replace(
+        user.emailVerified === false
+          ? "/verify-email"
+          : getWorkspaceHref(profile?.role),
+      );
     }
   }, [loading, profile?.role, router, user]);
 
@@ -30,8 +34,8 @@ export function LoginForm() {
     setIsSubmitting(true);
 
     try {
-      await loginWithEmailAndPassword({ email, password });
-      router.push("/dashboard");
+      const nextUser = await loginWithEmailAndPassword({ email, password });
+      router.push(nextUser.emailVerified ? "/dashboard" : "/verify-email");
     } catch {
       setFeedback(
         "Unable to sign in. Check your email and password, then try again.",

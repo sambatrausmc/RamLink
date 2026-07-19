@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  reload,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
@@ -22,6 +23,13 @@ async function getAuthClient() {
   return auth;
 }
 
+function getVerificationActionSettings() {
+  return {
+    url: new URL("/verify-email", window.location.origin).toString(),
+    handleCodeInApp: false,
+  };
+}
+
 export async function registerStudentAccount(input: RegisterStudentInput) {
   const email = requireFarmingdaleEmail(input.email);
   const displayName = input.displayName.trim();
@@ -34,11 +42,31 @@ export async function registerStudentAccount(input: RegisterStudentInput) {
   await updateProfile(credential.user, {
     displayName,
   });
-  await sendEmailVerification(credential.user, {
-    url: new URL("/verify-email", window.location.origin).toString(),
-    handleCodeInApp: false,
-  });
+  await sendEmailVerification(
+    credential.user,
+    getVerificationActionSettings(),
+  );
   return credential.user;
+}
+
+export async function resendCurrentUserVerification() {
+  const auth = await getAuthClient();
+  if (!auth.currentUser) {
+    throw new Error("Sign in before requesting another verification email.");
+  }
+  await sendEmailVerification(
+    auth.currentUser,
+    getVerificationActionSettings(),
+  );
+}
+
+export async function reloadCurrentUser() {
+  const auth = await getAuthClient();
+  if (!auth.currentUser) {
+    return null;
+  }
+  await reload(auth.currentUser);
+  return auth.currentUser;
 }
 export async function loginWithEmailAndPassword(input: LoginInput) {
   const auth = await getAuthClient();
