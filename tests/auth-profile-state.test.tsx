@@ -8,8 +8,15 @@ const mocks = vi.hoisted(() => ({
   authCallback: null as ((user: Record<string, unknown> | null) => Promise<void>) | null,
   ensurePersistence: vi.fn(),
   ensureProfile: vi.fn(),
+  createServerSession: vi.fn(),
   getProfile: vi.fn(),
+  readServerSession: vi.fn(),
   unsubscribe: vi.fn(),
+}));
+
+vi.mock("@/lib/firebase/server-session", () => ({
+  createServerSession: mocks.createServerSession,
+  readServerSession: mocks.readServerSession,
 }));
 
 vi.mock("@/lib/firebase/client", () => ({
@@ -54,11 +61,12 @@ const studentProfile = {
 };
 
 function AuthStateProbe() {
-  const { profile, profileStatus, refreshProfile } = useAuth();
+  const { profile, profileStatus, refreshProfile, sessionState } = useAuth();
   return (
     <div>
       <span data-testid="profile-status">{profileStatus}</span>
       <span data-testid="profile-name">{profile?.displayName ?? "none"}</span>
+      <span data-testid="session-status">{sessionState}</span>
       <button type="button" onClick={() => void refreshProfile()}>
         Retry profile
       </button>
@@ -76,6 +84,11 @@ describe("authenticated profile states", () => {
     mocks.ensurePersistence.mockResolvedValue(undefined);
     mocks.getProfile.mockResolvedValue(studentProfile);
     mocks.ensureProfile.mockResolvedValue(studentProfile);
+    mocks.createServerSession.mockResolvedValue(undefined);
+    mocks.readServerSession.mockResolvedValue({
+      authenticated: true,
+      uid: verifiedUser.uid,
+    });
   });
 
   async function renderProvider() {
@@ -96,6 +109,7 @@ describe("authenticated profile states", () => {
 
     expect(screen.getByTestId("profile-status").textContent).toBe("ready");
     expect(screen.getByTestId("profile-name").textContent).toBe("Student One");
+    expect(screen.getByTestId("session-status").textContent).toBe("ready");
     expect(mocks.ensureProfile).not.toHaveBeenCalled();
   });
 
@@ -144,6 +158,35 @@ describe("authenticated profile states", () => {
       await mocks.authCallback?.({ ...verifiedUser, emailVerified: false });
     });
 
+    expect(screen.getByTestId("profile-status").textContent).toBe("missing");
+    expect(screen.getByTestId("session-status").textContent).toBe(
+      "verificationRequired",
+    );
+    expect(mocks.getProfile).not.toHaveBeenCalled();
+  });
+
+  it("recovers a missing server cookie for a recent browser session", async () => {
+    mocks.readServerSession.mockResolvedValueOnce(null);
+    await renderProvider();
+
+    await act(async () => {
+      await mocks.authCallback?.(verifiedUser);
+    });
+
+    expect(mocks.createServerSession).toHaveBeenCalledWith(verifiedUser);
+    expect(screen.getByTestId("session-status").textContent).toBe("ready");
+  });
+
+  it("requires fresh sign-in when the server session cannot be renewed", async () => {
+    mocks.readServerSession.mockResolvedValueOnce(null);
+    mocks.createServerSession.mockRejectedValueOnce(new Error("stale login"));
+    await renderProvider();
+
+    await act(async () => {
+      await mocks.authCallback?.(verifiedUser);
+    });
+
+    expect(screen.getByTestId("session-status").textContent).toBe("error");
     expect(screen.getByTestId("profile-status").textContent).toBe("missing");
     expect(mocks.getProfile).not.toHaveBeenCalled();
   });

@@ -16,7 +16,7 @@ import {
 
 export function EmailVerificationPanel() {
   const router = useRouter();
-  const { loading, profile, refreshProfile, user } = useAuth();
+  const { loading, profile, refreshProfile, refreshSession, user } = useAuth();
   const [verified, setVerified] = useState(Boolean(user?.emailVerified));
   const [feedback, setFeedback] = useState("");
   const [busyAction, setBusyAction] = useState<
@@ -54,6 +54,7 @@ export function EmailVerificationPanel() {
         return;
       }
       await refreshProfile();
+      await refreshSession();
       setVerified(true);
     } catch {
       setFeedback("Unable to refresh verification status. Please try again.");

@@ -12,21 +12,21 @@ import { loginWithEmailAndPassword } from "@/lib/firebase/auth";
 
 export function LoginForm() {
   const router = useRouter();
-  const { loading, profile, user } = useAuth();
+  const { loading, profile, refreshSession, sessionState, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && sessionState !== "error") {
       router.replace(
         user.emailVerified === false
           ? "/verify-email"
           : getWorkspaceHref(profile?.role),
       );
     }
-  }, [loading, profile?.role, router, user]);
+  }, [loading, profile?.role, router, sessionState, user]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,6 +35,9 @@ export function LoginForm() {
 
     try {
       const nextUser = await loginWithEmailAndPassword({ email, password });
+      if (nextUser.emailVerified) {
+        await refreshSession();
+      }
       router.push(nextUser.emailVerified ? "/dashboard" : "/verify-email");
     } catch {
       setFeedback(
@@ -75,6 +78,12 @@ export function LoginForm() {
 
       {feedback ? (
         <p className="text-sm font-medium text-brand-forest">{feedback}</p>
+      ) : null}
+
+      {sessionState === "error" && !feedback ? (
+        <p className="text-sm font-medium text-brand-forest">
+          Sign in again to renew your secure RamLink session.
+        </p>
       ) : null}
 
       <Button className="w-full" type="submit" disabled={isSubmitting}>

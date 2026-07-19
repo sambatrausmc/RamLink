@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
     loading: false,
     profile: null as { role?: "student" | "clubOfficer" | "admin" } | null,
     refreshProfile: vi.fn(),
+    refreshSession: vi.fn(),
     user: {
       uid: "student-1",
       email: "student@farmingdale.edu",
@@ -50,6 +51,7 @@ describe("student email verification screen", () => {
       emailVerified: false,
     };
     mocks.authState.refreshProfile.mockResolvedValue(undefined);
+    mocks.authState.refreshSession.mockResolvedValue(true);
     mocks.logout.mockResolvedValue(undefined);
     mocks.reload.mockResolvedValue(mocks.authState.user);
     mocks.resend.mockResolvedValue(undefined);
@@ -96,6 +98,7 @@ describe("student email verification screen", () => {
 
     await waitFor(() => {
       expect(mocks.authState.refreshProfile).toHaveBeenCalledOnce();
+      expect(mocks.authState.refreshSession).toHaveBeenCalledOnce();
       expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
     });
   });
