@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   authState: {
     loading: false,
     profile: { role: "clubOfficer" as const },
+    refreshSession: vi.fn(),
+    sessionState: "ready" as "loading" | "ready" | "error",
     user: { uid: "officer-1", emailVerified: true } as {
       uid: string;
       emailVerified: boolean;
@@ -32,7 +34,14 @@ import { LoginForm } from "@/components/auth/login-form";
 
 describe("authenticated account routes", () => {
   afterEach(() => cleanup());
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.authState.sessionState = "ready";
+    mocks.authState.user = {
+      uid: "officer-1",
+      emailVerified: true,
+    };
+  });
 
   it("returns an authenticated user to the role workspace", async () => {
     render(<LoginForm />);
@@ -50,4 +59,15 @@ describe("authenticated account routes", () => {
       expect(mocks.replace).toHaveBeenCalledWith("/verify-email");
     });
   });
+
+  it.each(["loading", "error"] as const)(
+    "does not redirect a verified user while the server session is %s",
+    async (sessionState) => {
+      mocks.authState.sessionState = sessionState;
+      render(<LoginForm />);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(mocks.replace).not.toHaveBeenCalled();
+    },
+  );
 });

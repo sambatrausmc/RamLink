@@ -11,7 +11,14 @@ type RoleGateProps = {
 };
 
 export function RoleGate({ allowedRoles, children }: RoleGateProps) {
-  const { loading, profile, profileStatus, refreshProfile, user } = useAuth();
+  const {
+    loading,
+    profile,
+    profileStatus,
+    refreshProfile,
+    sessionState,
+    user,
+  } = useAuth();
   const role = profile?.role ?? "student";
 
   // Show a loading card while Firebase verifies authentication status
@@ -60,6 +67,27 @@ export function RoleGate({ allowedRoles, children }: RoleGateProps) {
             className="mt-5 inline-flex h-11 items-center justify-center rounded-[11px] bg-brand-forest px-4 text-sm font-semibold leading-none text-white transition hover:bg-brand-forestDark"
           >
             Verify account
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (sessionState === "error") {
+    return (
+      <Card>
+        <CardContent>
+          <h1 className="font-display text-2xl font-semibold text-brand-ink">
+            Secure session expired
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-brand-muted">
+            Sign in again before opening this RamLink workspace.
+          </p>
+          <Link
+            href="/login"
+            className="mt-5 inline-flex h-11 items-center justify-center rounded-[11px] bg-brand-forest px-4 text-sm font-semibold leading-none text-white transition hover:bg-brand-forestDark"
+          >
+            Sign in again
           </Link>
         </CardContent>
       </Card>
