@@ -33,11 +33,10 @@ export function RegisterForm() {
     setIsSubmitting(true);
 
     try {
-      // Pass the form data over to our auth helper to create the account AND the database doc
+      // Create the account first; its student profile is created after email verification.
       await registerStudentAccount({ displayName, email, password });
 
-      // Success! Open the new student's dashboard.
-      router.push("/dashboard");
+      router.push("/verify-email");
     } catch {
       // Something went wrong (email already in use, password too weak, etc.)
       setError("Unable to create account. Check the form and try again.");

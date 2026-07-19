@@ -1,11 +1,12 @@
 import {
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
 } from "firebase/auth";
-import { createStudentProfile } from "@/lib/firebase/user-profile";
+import { requireFarmingdaleEmail } from "@/lib/auth-email-policy";
 export type RegisterStudentInput = {
   displayName: string;
   email: string;
@@ -22,20 +23,20 @@ async function getAuthClient() {
 }
 
 export async function registerStudentAccount(input: RegisterStudentInput) {
-  // Firebase Auth creates the login account. Firestore stores the student profile data.
+  const email = requireFarmingdaleEmail(input.email);
+  const displayName = input.displayName.trim();
   const auth = await getAuthClient();
   const credential = await createUserWithEmailAndPassword(
     auth,
-    input.email,
+    email,
     input.password,
   );
   await updateProfile(credential.user, {
-    displayName: input.displayName,
+    displayName,
   });
-  await createStudentProfile(credential.user.uid, {
-    displayName: input.displayName,
-
-    email: input.email,
+  await sendEmailVerification(credential.user, {
+    url: new URL("/verify-email", window.location.origin).toString(),
+    handleCodeInApp: false,
   });
   return credential.user;
 }
