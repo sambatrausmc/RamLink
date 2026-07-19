@@ -7,14 +7,22 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isVerifiedFarmingdaleUser() {
+      return isSignedIn() &&
+        request.auth.token.email_verified == true &&
+        request.auth.token.email is string &&
+        request.auth.token.email.matches("^[^@ ]+@farmingdale[.]edu$");
+    }
+
     // Helper to confirm user is accessing their own document ID
     function isSelf(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return isVerifiedFarmingdaleUser() && request.auth.uid == userId;
     }
 
     // Checks if user profile exists in Firestore
     function userDocExists() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isVerifiedFarmingdaleUser() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
     // Retrieves active user profile document
@@ -78,6 +86,59 @@ service cloud.firestore {
         ]);
     }
 
+    function validNewStudentProfile(userId) {
+      let data = request.resource.data;
+      return isSelf(userId) &&
+        data.keys().hasAll([
+          "id",
+          "role",
+          "displayName",
+          "email",
+          "major",
+          "classYear",
+          "interests",
+          "joinedClubIds",
+          "savedClubIds",
+          "savedEventIds",
+          "rsvpedEventIds",
+          "managedClubIds",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        data.keys().hasOnly([
+          "id",
+          "role",
+          "displayName",
+          "email",
+          "major",
+          "classYear",
+          "interests",
+          "joinedClubIds",
+          "savedClubIds",
+          "savedEventIds",
+          "rsvpedEventIds",
+          "managedClubIds",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        data.id == userId &&
+        data.role == "student" &&
+        data.email == request.auth.token.email &&
+        data.displayName is string &&
+        data.displayName.size() > 0 &&
+        data.displayName.size() <= 100 &&
+        data.major is string &&
+        data.classYear is string &&
+        data.interests is list &&
+        data.joinedClubIds == [] &&
+        data.savedClubIds == [] &&
+        data.savedEventIds == [] &&
+        data.rsvpedEventIds == [] &&
+        data.managedClubIds == [] &&
+        data.createdAt == request.time &&
+        data.updatedAt == request.time;
+    }
+
     function studentUpdatesOwnRsvpProfile(userId) {
       let changedFields = request.resource.data.diff(resource.data).affectedKeys();
       let previousRsvps = resource.data.rsvpedEventIds.toSet();
@@ -118,7 +179,7 @@ service cloud.firestore {
       let removedRsvps = previousRsvps.difference(nextRsvps);
       let mutation = nextUser.data.rsvpMutation;
       let countChange = request.resource.data.rsvpCount - resource.data.rsvpCount;
-      return isSignedIn() &&
+      return isVerifiedFarmingdaleUser() &&
         "rsvpMutation" in nextUser.data &&
         mutation.eventId == eventId &&
         mutation.countChange == countChange &&
@@ -138,7 +199,7 @@ service cloud.firestore {
 
     function validNewJoinRequest(requestId) {
       let data = request.resource.data;
-      return isSignedIn() &&
+      return isVerifiedFarmingdaleUser() &&
         data.keys().hasAll([
           "clubId",
           "clubName",
@@ -173,7 +234,7 @@ service cloud.firestore {
 
     function studentReopensRejectedRequest(requestId) {
       let changedFields = request.resource.data.diff(resource.data).affectedKeys();
-      return isSignedIn() &&
+      return isVerifiedFarmingdaleUser() &&
         resource.data.studentId == request.auth.uid &&
         request.resource.data.studentId == resource.data.studentId &&
         request.resource.data.clubId == resource.data.clubId &&
@@ -204,7 +265,7 @@ service cloud.firestore {
 
     function validNewReport() {
       let data = request.resource.data;
-      return isSignedIn() &&
+      return isVerifiedFarmingdaleUser() &&
         data.keys().hasAll([
           "reporterId",
           "reporterName",
@@ -279,7 +340,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow create: if isSelf(userId) && request.resource.data.role == "student";
+      allow create: if validNewStudentProfile(userId);
       allow read: if isSelf(userId) || isAdmin() || officerCanReadManagedMember();
       allow update: if
         selfUpdatesAllowedProfileFields(userId) ||
@@ -291,7 +352,7 @@ service cloud.firestore {
 
     match /joinRequests/{requestId} {
       allow create: if validNewJoinRequest(requestId);
-      allow read: if isSignedIn() &&
+      allow read: if isVerifiedFarmingdaleUser() &&
         (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
       allow update: if
         (managesClub(resource.data.clubId) &&
@@ -302,16 +363,16 @@ service cloud.firestore {
             .hasOnly(["status", "updatedAt"])) ||
         studentReopensRejectedRequest(requestId);
       allow delete: if isAdmin() ||
-        (isSignedIn() &&
+        (isVerifiedFarmingdaleUser() &&
           resource.data.studentId == request.auth.uid &&
           resource.data.status == "pending");
     }
 
     match /inquiries/{inquiryId} {
-      allow create: if isSignedIn() &&
+      allow create: if isVerifiedFarmingdaleUser() &&
         request.resource.data.studentId == request.auth.uid &&
         request.resource.data.status == "open";
-      allow read: if isSignedIn() &&
+      allow read: if isVerifiedFarmingdaleUser() &&
         (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
       allow update: if managesClub(resource.data.clubId) &&
         request.resource.data.clubId == resource.data.clubId &&
@@ -324,13 +385,14 @@ service cloud.firestore {
 
     match /notifications/{notificationId} {
       // Allows self-notifications, admin alerts, or officer alerts sent from managed clubs
-      allow create: if isSignedIn() &&
+      allow create: if isVerifiedFarmingdaleUser() &&
         (request.resource.data.userId == request.auth.uid ||
           isAdmin() ||
           ("clubId" in request.resource.data && managesClub(request.resource.data.clubId)));
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isVerifiedFarmingdaleUser() &&
+        resource.data.userId == request.auth.uid;
       // Users can only mark their own notifications read/unread
-      allow update: if isSignedIn() &&
+      allow update: if isVerifiedFarmingdaleUser() &&
         resource.data.userId == request.auth.uid &&
         request.resource.data.status in ["read", "unread"] &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"]);

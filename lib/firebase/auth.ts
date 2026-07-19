@@ -1,11 +1,14 @@
 import {
   createUserWithEmailAndPassword,
+  getIdToken,
+  reload,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
 } from "firebase/auth";
-import { createStudentProfile } from "@/lib/firebase/user-profile";
+import { requireFarmingdaleEmail } from "@/lib/auth-email-policy";
 export type RegisterStudentInput = {
   displayName: string;
   email: string;
@@ -21,29 +24,61 @@ async function getAuthClient() {
   return auth;
 }
 
+function getVerificationActionSettings() {
+  return {
+    url: new URL("/verify-email", window.location.origin).toString(),
+    handleCodeInApp: false,
+  };
+}
+
 export async function registerStudentAccount(input: RegisterStudentInput) {
-  // Firebase Auth creates the login account. Firestore stores the student profile data.
+  const email = requireFarmingdaleEmail(input.email);
+  const displayName = input.displayName.trim();
   const auth = await getAuthClient();
   const credential = await createUserWithEmailAndPassword(
     auth,
-    input.email,
+    email,
     input.password,
   );
   await updateProfile(credential.user, {
-    displayName: input.displayName,
+    displayName,
   });
-  await createStudentProfile(credential.user.uid, {
-    displayName: input.displayName,
-
-    email: input.email,
-  });
+  await sendEmailVerification(
+    credential.user,
+    getVerificationActionSettings(),
+  );
   return credential.user;
 }
+
+export async function resendCurrentUserVerification() {
+  const auth = await getAuthClient();
+  if (!auth.currentUser?.email) {
+    throw new Error("Sign in before requesting another verification email.");
+  }
+  requireFarmingdaleEmail(auth.currentUser.email);
+  await sendEmailVerification(
+    auth.currentUser,
+    getVerificationActionSettings(),
+  );
+}
+
+export async function reloadCurrentUser() {
+  const auth = await getAuthClient();
+  if (!auth.currentUser) {
+    return null;
+  }
+  await reload(auth.currentUser);
+  if (auth.currentUser.emailVerified) {
+    await getIdToken(auth.currentUser, true);
+  }
+  return auth.currentUser;
+}
 export async function loginWithEmailAndPassword(input: LoginInput) {
+  const email = requireFarmingdaleEmail(input.email);
   const auth = await getAuthClient();
   const credential = await signInWithEmailAndPassword(
     auth,
-    input.email,
+    email,
     input.password,
   );
   return credential.user;
@@ -54,5 +89,5 @@ export async function logoutCurrentUser() {
 }
 export async function resetPasswordForEmail(email: string) {
   const auth = await getAuthClient();
-  await sendPasswordResetEmail(auth, email);
+  await sendPasswordResetEmail(auth, requireFarmingdaleEmail(email));
 }

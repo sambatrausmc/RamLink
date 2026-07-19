@@ -15,6 +15,28 @@ vi.mock("@/lib/firebase/public-data", () => ({
   getAnnouncements: async () => announcements,
 }));
 
+vi.mock("@/components/auth/auth-provider", () => ({
+  useAuth: () => ({
+    loading: false,
+    profileStatus: "ready",
+    refreshProfile: async () => {},
+    user: { uid: "test-student", emailVerified: true },
+    profile: {
+      id: "test-student",
+      role: "student",
+      displayName: "Test Student",
+      email: "test-student@farmingdale.edu",
+      major: "Computer Programming",
+      classYear: "Senior",
+      interests: [],
+      joinedClubIds: [],
+      savedClubIds: [],
+      savedEventIds: [],
+      rsvpedEventIds: [],
+    },
+  }),
+}));
+
 describe("remaining frontend completion", () => {
   it("renders the student dashboard home base sections", async () => {
     // 1. Await the async server component so it resolves its Firestore data

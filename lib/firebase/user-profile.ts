@@ -1,12 +1,14 @@
 import {
   doc,
   getDoc,
+  runTransaction,
   serverTimestamp,
-  setDoc,
   updateDoc,
   type DocumentData,
 } from "firebase/firestore";
+import type { User } from "firebase/auth";
 import { COLLECTIONS } from "@/lib/firebase/collections";
+import { requireFarmingdaleEmail } from "@/lib/auth-email-policy";
 import type { StudentProfile, UserRole } from "@/lib/types";
 
 type CreateStudentProfileInput = {
@@ -78,16 +80,37 @@ function buildNewStudentProfile(
   };
 }
 
-export async function createStudentProfile(
-  uid: string,
-  input: CreateStudentProfileInput,
-) {
-  // The user document ID matches the Firebase Auth UID so pages can load the right student.
+type VerifiedAccount = Pick<
+  User,
+  "displayName" | "email" | "emailVerified" | "uid"
+>;
+
+export async function ensureStudentProfile(user: VerifiedAccount) {
+  if (!user.emailVerified || !user.email) {
+    throw new Error("Verify your Farmingdale email before creating a profile.");
+  }
+
+  const email = requireFarmingdaleEmail(user.email);
+  const displayName = user.displayName?.trim() || email.split("@")[0];
   const db = await getDb();
-  await setDoc(doc(db, COLLECTIONS.users, uid), {
-    ...buildNewStudentProfile(uid, input),
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  const profileReference = doc(db, COLLECTIONS.users, user.uid);
+
+  return runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(profileReference);
+    if (snapshot.exists()) {
+      return normalizeStudentProfile(snapshot.id, snapshot.data());
+    }
+
+    const profile = buildNewStudentProfile(user.uid, {
+      displayName,
+      email,
+    });
+    transaction.set(profileReference, {
+      ...profile,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return profile;
   });
 }
 

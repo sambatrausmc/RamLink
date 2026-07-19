@@ -27,46 +27,38 @@ import type {
   EventItem,
   JoinRequest,
   NotificationItem as NotificationType,
-  StudentProfile,
 } from "@/lib/types";
 type StudentDashboardClientProps = {
-  fallbackStudent: StudentProfile;
   clubs: Club[];
   events: EventItem[];
   announcements: Announcement[];
-  joinRequests: JoinRequest[];
-  notifications: NotificationType[];
 };
 function getFirstName(displayName: string) {
   return displayName.split(" ").filter(Boolean)[0] ?? "there";
 }
 export function StudentDashboardClient({
-  fallbackStudent,
   clubs,
   events,
   announcements,
-  joinRequests,
-  notifications,
 }: StudentDashboardClientProps) {
-  const { profile, user } = useAuth();
-  const student = profile ?? fallbackStudent;
-  const [studentRequests, setStudentRequests] = useState(
-    joinRequests.filter((request) => request.studentId === fallbackStudent.id),
-  );
-  const [studentNotifications, setStudentNotifications] =
-    useState(notifications);
+  const { loading, profile, profileStatus, user } = useAuth();
+  const [studentRequests, setStudentRequests] = useState<JoinRequest[]>([]);
+  const [studentNotifications, setStudentNotifications] = useState<
+    NotificationType[]
+  >([]);
+  const [activityStatus, setActivityStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
   useEffect(() => {
     let active = true;
     async function loadStudentData() {
       if (!user) {
-        setStudentRequests(
-          joinRequests.filter(
-            (request) => request.studentId === fallbackStudent.id,
-          ),
-        );
-        setStudentNotifications(notifications);
+        setStudentRequests([]);
+        setStudentNotifications([]);
+        setActivityStatus("error");
         return;
       }
+      setActivityStatus("loading");
       try {
         const [requests, nextNotifications] = await Promise.all([
           getStudentJoinRequests(user.uid),
@@ -75,15 +67,13 @@ export function StudentDashboardClient({
         if (active) {
           setStudentRequests(requests);
           setStudentNotifications(nextNotifications);
+          setActivityStatus("ready");
         }
       } catch {
         if (active) {
-          setStudentRequests(
-            joinRequests.filter(
-              (request) => request.studentId === fallbackStudent.id,
-            ),
-          );
-          setStudentNotifications(notifications);
+          setStudentRequests([]);
+          setStudentNotifications([]);
+          setActivityStatus("error");
         }
       }
     }
@@ -91,7 +81,32 @@ export function StudentDashboardClient({
     return () => {
       active = false;
     };
-  }, [fallbackStudent.id, joinRequests, notifications, user]);
+  }, [user]);
+
+  if (loading || profileStatus === "loading" || profileStatus === "missing") {
+    return (
+      <Card>
+        <CardContent>
+          <p className="text-sm text-brand-muted">Loading your dashboard...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!user || !profile || profileStatus === "error") {
+    return (
+      <Card>
+        <CardContent>
+          <p className="text-sm text-red-700">
+            Your student profile could not be loaded. Try again from the
+            workspace access screen.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const student = profile;
   const savedClubIds = new Set(student.savedClubIds);
   const savedEventIds = new Set(student.savedEventIds);
   const rsvpedEventIds = new Set(student.rsvpedEventIds ?? []);
@@ -153,6 +168,16 @@ export function StudentDashboardClient({
           </Link>
         }
       />
+      {activityStatus === "error" ? (
+        <Card>
+          <CardContent>
+            <p className="text-sm font-medium text-red-700">
+              Join requests and notifications could not be loaded. Refresh the
+              page to try again.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Joined clubs"

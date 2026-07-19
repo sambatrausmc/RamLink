@@ -9,9 +9,22 @@ const mocks = vi.hoisted(() => {
   return {
     authState: {
       loading: false,
-      profile: null,
+      profile: {
+        id: "student-1",
+        role: "student",
+        displayName: "Live Student",
+        email: "student-1@farmingdale.edu",
+        major: "Computer Programming",
+        classYear: "Senior",
+        interests: [],
+        joinedClubIds: [],
+        savedClubIds: [],
+        savedEventIds: [],
+        rsvpedEventIds: [],
+      },
+      profileStatus: "ready" as const,
       refreshProfile,
-      user: { uid: "student-1" },
+      user: { uid: "student-1", emailVerified: true },
     },
     getStudentJoinRequests: vi.fn(),
     getStudentNotifications: vi.fn(),
@@ -39,9 +52,7 @@ import { StudentDashboardClient } from "@/components/student/student-dashboard-c
 import {
   announcements,
   clubs,
-  currentStudent,
   events,
-  joinRequests,
   notifications,
 } from "@/lib/mock-data";
 import type { NotificationItem } from "@/lib/types";
@@ -107,12 +118,9 @@ describe("student notification refinements", () => {
   it("loads signed-in notification data on the student dashboard", async () => {
     render(
       <StudentDashboardClient
-        fallbackStudent={currentStudent}
         clubs={clubs}
         events={events}
         announcements={announcements}
-        joinRequests={joinRequests}
-        notifications={notifications}
       />,
     );
 
@@ -120,6 +128,26 @@ describe("student notification refinements", () => {
 
     expect(mocks.getStudentJoinRequests).toHaveBeenCalledWith("student-1");
     expect(mocks.getStudentNotifications).toHaveBeenCalledWith("student-1");
+    expect(screen.queryByText("Robotics Club request pending")).toBeNull();
+  });
+
+  it("shows an error instead of mock activity when dashboard queries fail", async () => {
+    mocks.getStudentJoinRequests.mockRejectedValueOnce(new Error("Unavailable"));
+    mocks.getStudentNotifications.mockRejectedValueOnce(new Error("Unavailable"));
+
+    render(
+      <StudentDashboardClient
+        clubs={clubs}
+        events={events}
+        announcements={announcements}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        "Join requests and notifications could not be loaded. Refresh the page to try again.",
+      ),
+    ).toBeTruthy();
     expect(screen.queryByText("Robotics Club request pending")).toBeNull();
   });
 });

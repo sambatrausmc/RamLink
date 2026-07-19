@@ -7,17 +7,50 @@ import { PageHeader } from "@/components/common/page-header";
 import { StatCard } from "@/components/common/stat-card";
 import { EmptyState } from "@/components/common/empty-state";
 import { useAuth } from "@/components/auth/auth-provider";
-import type { Club, EventItem, StudentProfile } from "@/lib/types";
+import { Card, CardContent } from "@/components/ui/card";
+import type { Club, EventItem } from "@/lib/types";
 
 type SavedItemsClientProps = {
-  fallbackStudent: StudentProfile;
   clubs: Club[];
   events: EventItem[];
 };
 
-export function SavedItemsClient({ fallbackStudent, clubs, events }: SavedItemsClientProps) {
-  const { profile } = useAuth();
-  const student = profile ?? fallbackStudent;
+export function SavedItemsClient({ clubs, events }: SavedItemsClientProps) {
+  const { loading, profile, profileStatus, refreshProfile } = useAuth();
+
+  if (loading || profileStatus === "loading" || profileStatus === "missing") {
+    return (
+      <Card>
+        <CardContent>
+          <p className="text-sm text-brand-muted">Loading your saved items...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!profile || profileStatus === "error") {
+    return (
+      <Card>
+        <CardContent>
+          <h1 className="font-display text-2xl font-semibold text-brand-ink">
+            Saved items unavailable
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-brand-muted">
+            RamLink could not load your bookmarks. No sample account data was substituted.
+          </p>
+          <button
+            type="button"
+            onClick={() => void refreshProfile()}
+            className="mt-4 text-sm font-semibold text-brand-forest hover:underline"
+          >
+            Try again
+          </button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const student = profile;
 
   const savedClubs = clubs.filter((club) => student.savedClubIds.includes(club.id));
   const savedEvents = events

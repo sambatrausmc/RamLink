@@ -11,7 +11,6 @@ import { useAuth } from "@/components/auth/auth-provider";
 import type { Club, Interest, StudentProfile } from "@/lib/types";
 
 type StudentProfileClientProps = {
-  fallbackStudent: StudentProfile;
   clubs: Club[];
   interests: Interest[];
 };
@@ -25,11 +24,43 @@ function getInitials(displayName: string) {
   return initials || "ST";
 }
 
-export function StudentProfileClient({ fallbackStudent, clubs, interests }: StudentProfileClientProps) {
-  const { loading, profile, user } = useAuth();
+export function StudentProfileClient({ clubs, interests }: StudentProfileClientProps) {
+  const { loading, profile, profileStatus, refreshProfile, user } = useAuth();
   const [updatedProfile, setUpdatedProfile] = useState<StudentProfile | null>(null);
 
-  const latestProfile = profile ?? fallbackStudent;
+  if (loading || profileStatus === "loading" || profileStatus === "missing") {
+    return (
+      <Card>
+        <CardContent>
+          <p className="text-sm text-brand-muted">Loading your student profile...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!profile || profileStatus === "error") {
+    return (
+      <Card>
+        <CardContent>
+          <h1 className="font-display text-2xl font-semibold text-brand-ink">
+            Student profile unavailable
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-brand-muted">
+            RamLink could not load your saved profile. No sample student data was substituted.
+          </p>
+          <button
+            type="button"
+            onClick={() => void refreshProfile()}
+            className="mt-4 text-sm font-semibold text-brand-forest hover:underline"
+          >
+            Try again
+          </button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const latestProfile = profile;
   const student = updatedProfile?.id === latestProfile.id ? updatedProfile : latestProfile;
   const joinedClubs = clubs.filter((club) => student.joinedClubIds.includes(club.id));
   const initials = getInitials(student.displayName);
