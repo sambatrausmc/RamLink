@@ -6,13 +6,12 @@ const studentPassword = process.env.E2E_STUDENT_PASSWORD;
 test("protected student pages require authentication", async ({ page }) => {
   for (const path of ["/account", "/report"]) {
     await page.goto(path);
-    await expect(
-      page.getByRole("heading", { name: "Sign in required" }),
-    ).toBeVisible();
-    await expect(page.getByRole("link", { name: "Sign in" })).toHaveAttribute(
-      "href",
-      "/login",
+    await expect(page).toHaveURL(
+      new RegExp(`/login\\?next=${encodeURIComponent(path)}`),
     );
+    await expect(
+      page.getByRole("heading", { name: "Continue to RamLink" }),
+    ).toBeVisible();
   }
 });
 
