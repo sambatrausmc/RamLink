@@ -18,8 +18,13 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   const { loading, profile, user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const workspaceHref = getWorkspaceHref(profile?.role);
-  const profileHref = getProfileHref(profile?.role);
+  const needsVerification = user?.emailVerified === false;
+  const workspaceHref = needsVerification
+    ? "/verify-email"
+    : getWorkspaceHref(profile?.role);
+  const profileHref = needsVerification
+    ? "/verify-email"
+    : getProfileHref(profile?.role);
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 8);
     handleScroll();

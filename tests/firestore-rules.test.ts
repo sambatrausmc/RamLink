@@ -29,6 +29,13 @@ const [host = "127.0.0.1", portText = "8080"] =
 describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   let testEnvironment: RulesTestEnvironment;
 
+  function verifiedContext(uid: string) {
+    return testEnvironment.authenticatedContext(uid, {
+      email: `${uid}@farmingdale.edu`,
+      email_verified: true,
+    });
+  }
+
   beforeAll(async () => {
     testEnvironment = await initializeTestEnvironment({
       projectId: "demo-ramlink",
@@ -158,9 +165,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   });
 
   it("allows profile edits but blocks self-approved memberships", async () => {
-    const studentDb = testEnvironment
-      .authenticatedContext("student-1")
-      .firestore();
+    const studentDb = verifiedContext("student-1").firestore();
     const studentRef = doc(studentDb, "users/student-1");
 
     await assertSucceeds(
@@ -178,10 +183,79 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
   });
 
-  it("requires RSVP profile and event count updates to stay together", async () => {
-    const studentDb = testEnvironment
-      .authenticatedContext("student-1")
+  it("allows only verified Farmingdale users to create their own student profile", async () => {
+    const studentDb = verifiedContext("new-student").firestore();
+    const profile = {
+      id: "new-student",
+      role: "student",
+      displayName: "New Student",
+      email: "new-student@farmingdale.edu",
+      major: "",
+      classYear: "",
+      interests: [],
+      joinedClubIds: [],
+      savedClubIds: [],
+      savedEventIds: [],
+      rsvpedEventIds: [],
+      managedClubIds: [],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    await assertSucceeds(
+      setDoc(doc(studentDb, "users/new-student"), profile),
+    );
+    await assertFails(
+      setDoc(doc(studentDb, "users/another-student"), {
+        ...profile,
+        id: "another-student",
+      }),
+    );
+
+    const forgedDb = verifiedContext("forged-user").firestore();
+    await assertFails(
+      setDoc(doc(forgedDb, "users/forged-user"), {
+        ...profile,
+        id: "forged-user",
+        email: "forged-user@farmingdale.edu",
+        role: "admin",
+      }),
+    );
+  });
+
+  it("blocks unverified and non-Farmingdale accounts from protected data", async () => {
+    const unverifiedDb = testEnvironment
+      .authenticatedContext("student-1", {
+        email: "student-1@farmingdale.edu",
+        email_verified: false,
+      })
       .firestore();
+    const wrongDomainDb = testEnvironment
+      .authenticatedContext("student-1", {
+        email: "student-1@example.com",
+        email_verified: true,
+      })
+      .firestore();
+
+    await assertFails(getDoc(doc(unverifiedDb, "users/student-1")));
+    await assertFails(getDoc(doc(wrongDomainDb, "users/student-1")));
+    await assertSucceeds(getDoc(doc(unverifiedDb, "clubs/club-1")));
+    await assertSucceeds(getDoc(doc(wrongDomainDb, "events/event-1")));
+  });
+
+  it("keeps discovery collections public for signed-out visitors", async () => {
+    const publicDb = testEnvironment.unauthenticatedContext().firestore();
+
+    await assertSucceeds(getDoc(doc(publicDb, "clubs/club-1")));
+    await assertSucceeds(getDoc(doc(publicDb, "events/event-1")));
+    await assertSucceeds(
+      getDoc(doc(publicDb, "announcements/announcement-1")),
+    );
+    await assertSucceeds(getDoc(doc(publicDb, "resources/resource-1")));
+  });
+
+  it("requires RSVP profile and event count updates to stay together", async () => {
+    const studentDb = verifiedContext("student-1").firestore();
 
     const batch = writeBatch(studentDb);
     batch.update(doc(studentDb, "users/student-1"), {
@@ -240,12 +314,8 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   });
 
   it("allows a student to cancel only their own pending request", async () => {
-    const studentDb = testEnvironment
-      .authenticatedContext("student-1")
-      .firestore();
-    const unrelatedDb = testEnvironment
-      .authenticatedContext("unrelated-1")
-      .firestore();
+    const studentDb = verifiedContext("student-1").firestore();
+    const unrelatedDb = verifiedContext("unrelated-1").firestore();
 
     await assertFails(
       deleteDoc(doc(unrelatedDb, "joinRequests/request-1")),
@@ -257,9 +327,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   });
 
   it("requires deterministic IDs for new join requests", async () => {
-    const studentDb = testEnvironment
-      .authenticatedContext("student-1")
-      .firestore();
+    const studentDb = verifiedContext("student-1").firestore();
     const requestData = {
       clubId: "club-2",
       clubName: "Second Campus Club",
@@ -281,9 +349,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   });
 
   it("allows rejected requests to reopen without bypassing approval", async () => {
-    const studentDb = testEnvironment
-      .authenticatedContext("student-1")
-      .firestore();
+    const studentDb = verifiedContext("student-1").firestore();
     const requestRef = doc(studentDb, "joinRequests/student-1_club-1");
 
     await assertSucceeds(
@@ -295,9 +361,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
       }),
     );
 
-    const officerDb = testEnvironment
-      .authenticatedContext("officer-1")
-      .firestore();
+    const officerDb = verifiedContext("officer-1").firestore();
     await assertSucceeds(
       updateDoc(doc(officerDb, "joinRequests/student-1_club-1"), {
         status: "approved",
@@ -316,9 +380,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   });
 
   it("allows officers to change status without changing request ownership", async () => {
-    const officerDb = testEnvironment
-      .authenticatedContext("officer-1")
-      .firestore();
+    const officerDb = verifiedContext("officer-1").firestore();
     const requestRef = doc(officerDb, "joinRequests/request-1");
 
     await assertSucceeds(
@@ -337,9 +399,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   });
 
   it("limits officers to users in their managed clubs", async () => {
-    const officerDb = testEnvironment
-      .authenticatedContext("officer-1")
-      .firestore();
+    const officerDb = verifiedContext("officer-1").firestore();
 
     const memberQuery = query(
       collection(officerDb, "users"),
@@ -353,9 +413,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   });
 
   it("allows inquiry replies without allowing inquiry reassignment", async () => {
-    const officerDb = testEnvironment
-      .authenticatedContext("officer-1")
-      .firestore();
+    const officerDb = verifiedContext("officer-1").firestore();
     const inquiryRef = doc(officerDb, "inquiries/inquiry-1");
 
     await assertSucceeds(
@@ -382,9 +440,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   });
 
   it("limits notification updates to the owner and valid statuses", async () => {
-    const studentDb = testEnvironment
-      .authenticatedContext("student-1")
-      .firestore();
+    const studentDb = verifiedContext("student-1").firestore();
     const notificationRef = doc(
       studentDb,
       "notifications/notification-1",
@@ -404,9 +460,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
       }),
     );
 
-    const unrelatedDb = testEnvironment
-      .authenticatedContext("unrelated-1")
-      .firestore();
+    const unrelatedDb = verifiedContext("unrelated-1").firestore();
     await assertFails(
       updateDoc(doc(unrelatedDb, "notifications/notification-1"), {
         status: "unread",
@@ -416,12 +470,8 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   });
 
   it("limits content management to officers of the matching club", async () => {
-    const officerDb = testEnvironment
-      .authenticatedContext("officer-1")
-      .firestore();
-    const otherOfficerDb = testEnvironment
-      .authenticatedContext("officer-2")
-      .firestore();
+    const officerDb = verifiedContext("officer-1").firestore();
+    const otherOfficerDb = verifiedContext("officer-2").firestore();
 
     await assertSucceeds(
       updateDoc(doc(officerDb, "events/event-1"), {
@@ -451,10 +501,8 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   });
 
   it("reserves club lifecycle changes for administrators", async () => {
-    const officerDb = testEnvironment
-      .authenticatedContext("officer-1")
-      .firestore();
-    const adminDb = testEnvironment.authenticatedContext("admin-1").firestore();
+    const officerDb = verifiedContext("officer-1").firestore();
+    const adminDb = verifiedContext("admin-1").firestore();
     const clubRef = doc(officerDb, "clubs/club-1");
 
     await assertSucceeds(
@@ -474,9 +522,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   });
 
   it("accepts only authenticated reports owned by the reporter", async () => {
-    const studentDb = testEnvironment
-      .authenticatedContext("student-1")
-      .firestore();
+    const studentDb = verifiedContext("student-1").firestore();
     const anonymousDb = testEnvironment.unauthenticatedContext().firestore();
     const validReport = {
       reporterId: "student-1",
@@ -515,7 +561,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
 
     await assertFails(getDoc(doc(studentDb, "reports/report-1")));
-    const adminDb = testEnvironment.authenticatedContext("admin-1").firestore();
+    const adminDb = verifiedContext("admin-1").firestore();
     await assertSucceeds(getDoc(doc(adminDb, "reports/report-1")));
   });
 });
