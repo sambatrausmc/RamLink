@@ -1,5 +1,6 @@
 import { RoleGate } from "@/components/auth/role-gate";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
+import { requireWorkspaceRole } from "@/lib/server/workspace-authorization";
 
 // Includes the new Account Settings route in the student navigation sidebar
 const studentNav = [
@@ -13,7 +14,12 @@ const studentNav = [
   { label: "Account", href: "/account" },
 ];
 
-export default function StudentLayout({ children }: { children: React.ReactNode }) {
+export default async function StudentLayout({ children }: { children: React.ReactNode }) {
+  await requireWorkspaceRole(
+    ["student", "clubOfficer", "admin"],
+    "/dashboard",
+  );
+
   return (
     <WorkspaceShell roleLabel="Student Mode" navItems={studentNav}>
       <RoleGate allowedRoles={["student", "clubOfficer", "admin"]}>{children}</RoleGate>
