@@ -1,4 +1,8 @@
-import { doc, runTransaction, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
+import {
+  createAuditedBatch,
+  prepareClientAuditLog,
+} from "@/lib/firebase/audit-logs";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import type { ClubCategory, ClubStatus, ReportStatus, UserRole } from "@/lib/types";
 
@@ -26,10 +30,16 @@ async function getDb() {
 // ADMIN ACTION: Promote or demote a user's role in Firestore
 export async function updateUserRole(userId: string, role: UserRole) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.users, userId), {
+  const batch = await createAuditedBatch(db, "admin", {
+    action: "admin.user_role_updated",
+    targetType: "user",
+    targetId: userId,
+  });
+  batch.update(doc(db, COLLECTIONS.users, userId), {
     role,
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
 }
 
 // ADMIN ACTION: Update the status of a content moderation report
@@ -38,10 +48,16 @@ export async function updateReportStatus(
   status: ReportStatus,
 ) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.reports, reportId), {
+  const batch = await createAuditedBatch(db, "admin", {
+    action: "admin.report_status_updated",
+    targetType: "report",
+    targetId: reportId,
+  });
+  batch.update(doc(db, COLLECTIONS.reports, reportId), {
     status,
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
 }
 
 // ADMIN ACTION: Assigns managed club IDs to a club officer account
@@ -50,10 +66,16 @@ export async function updateManagedClubs(
   managedClubIds: string[],
 ) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.users, userId), {
+  const batch = await createAuditedBatch(db, "admin", {
+    action: "admin.user_clubs_updated",
+    targetType: "user",
+    targetId: userId,
+  });
+  batch.update(doc(db, COLLECTIONS.users, userId), {
     managedClubIds,
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
 }
 
 // ADMIN ACTION: Create a pending club record with a URL-safe document ID
@@ -70,6 +92,12 @@ export async function createClubRecord(input: CreateClubRecordInput) {
   }
 
   const clubRef = doc(db, COLLECTIONS.clubs, clubId);
+  const audit = await prepareClientAuditLog(db, "admin", {
+    action: "admin.club_created",
+    targetType: "club",
+    targetId: clubId,
+    clubId,
+  });
 
   await runTransaction(db, async (transaction) => {
     const existingClub = await transaction.get(clubRef);
@@ -92,6 +120,7 @@ export async function createClubRecord(input: CreateClubRecordInput) {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+    transaction.set(audit.reference, audit.data);
   });
 
   return clubId;
@@ -100,8 +129,15 @@ export async function createClubRecord(input: CreateClubRecordInput) {
 // ADMIN ACTION: Approve, suspend, or archive a campus club record
 export async function updateClubStatus(clubId: string, status: ClubStatus) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.clubs, clubId), {
+  const batch = await createAuditedBatch(db, "admin", {
+    action: "admin.club_status_updated",
+    targetType: "club",
+    targetId: clubId,
+    clubId,
+  });
+  batch.update(doc(db, COLLECTIONS.clubs, clubId), {
     status,
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
 }

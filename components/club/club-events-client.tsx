@@ -94,7 +94,7 @@ export function ClubEventsClient() {
     if (!clubId) return;
     const form = new FormData(formEvent.currentTarget);
     try {
-      await updateClubEvent(eventId, {
+      await updateClubEvent(eventId, clubId, {
         title: String(form.get("title") ?? "").trim(),
         description: String(form.get("description") ?? "").trim(),
         date: String(form.get("date") ?? ""),
@@ -112,7 +112,7 @@ export function ClubEventsClient() {
   async function handleDelete(eventId: string) {
     if (!clubId || !window.confirm("Delete this event?")) return;
     try {
-      await deleteClubEvent(eventId);
+      await deleteClubEvent(eventId, clubId);
       await loadEvents(clubId);
       setFeedback("Event deleted.");
     } catch {

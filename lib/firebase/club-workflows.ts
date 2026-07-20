@@ -1,9 +1,7 @@
 import {
-  addDoc,
   arrayRemove,
   arrayUnion,
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -11,10 +9,12 @@ import {
   query,
   runTransaction,
   serverTimestamp,
-  updateDoc,
   where,
-  writeBatch,
 } from "firebase/firestore";
+import {
+  createAuditedBatch,
+  prepareClientAuditLog,
+} from "@/lib/firebase/audit-logs";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import type {
   Club,
@@ -118,40 +118,57 @@ export function buildOfficerReply(
 // Creates a new campus event and sets initial RSVP counters
 export async function createClubEvent(input: CreateClubEventInput) {
   const db = await getDb();
-  await addDoc(collection(db, COLLECTIONS.events), {
+  const eventRef = doc(collection(db, COLLECTIONS.events));
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.event_created",
+    targetType: "event",
+    targetId: eventRef.id,
+    clubId: input.clubId,
+  });
+  batch.set(eventRef, {
     ...input,
     rsvpCount: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
+  return eventRef.id;
 }
 
 export async function updateClubEvent(
   eventId: string,
+  clubId: string,
   input: UpdateClubEventInput,
 ) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.events, eventId), {
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.event_updated",
+    targetType: "event",
+    targetId: eventId,
+    clubId,
+  });
+  batch.update(doc(db, COLLECTIONS.events, eventId), {
     ...input,
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
 }
 
-export async function deleteClubEvent(eventId: string) {
+export async function deleteClubEvent(eventId: string, clubId: string) {
   const db = await getDb();
-  await deleteDoc(doc(db, COLLECTIONS.events, eventId));
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.event_deleted",
+    targetType: "event",
+    targetId: eventId,
+    clubId,
+  });
+  batch.delete(doc(db, COLLECTIONS.events, eventId));
+  await batch.commit();
 }
 
 // Posts a new announcement and automatically notifies all existing club members
 export async function createClubAnnouncement(input: CreateAnnouncementInput) {
   const db = await getDb();
-  await addDoc(collection(db, COLLECTIONS.announcements), {
-    ...input,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-
-  // Query all users whose joinedClubIds array contains this club
   const members = await getDocs(
     query(
       collection(db, COLLECTIONS.users),
@@ -159,8 +176,19 @@ export async function createClubAnnouncement(input: CreateAnnouncementInput) {
     ),
   );
 
-  // Batch create an unread notification for every member
-  const batch = writeBatch(db);
+  const announcementRef = doc(collection(db, COLLECTIONS.announcements));
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.announcement_created",
+    targetType: "announcement",
+    targetId: announcementRef.id,
+    clubId: input.clubId,
+  });
+  batch.set(announcementRef, {
+    ...input,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
   members.forEach((member) => {
     batch.set(doc(collection(db, COLLECTIONS.notifications)), {
       userId: member.id,
@@ -174,47 +202,90 @@ export async function createClubAnnouncement(input: CreateAnnouncementInput) {
     });
   });
   await batch.commit();
+  return announcementRef.id;
 }
 
 export async function updateClubAnnouncement(
   announcementId: string,
+  clubId: string,
   input: UpdateAnnouncementInput,
 ) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.announcements, announcementId), {
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.announcement_updated",
+    targetType: "announcement",
+    targetId: announcementId,
+    clubId,
+  });
+  batch.update(doc(db, COLLECTIONS.announcements, announcementId), {
     ...input,
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
 }
 
-export async function deleteClubAnnouncement(announcementId: string) {
+export async function deleteClubAnnouncement(
+  announcementId: string,
+  clubId: string,
+) {
   const db = await getDb();
-  await deleteDoc(doc(db, COLLECTIONS.announcements, announcementId));
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.announcement_deleted",
+    targetType: "announcement",
+    targetId: announcementId,
+    clubId,
+  });
+  batch.delete(doc(db, COLLECTIONS.announcements, announcementId));
+  await batch.commit();
 }
 
 // Uploads a new club resource link or document reference
 export async function createClubResource(input: CreateResourceInput) {
   const db = await getDb();
-  await addDoc(collection(db, COLLECTIONS.resources), {
+  const resourceRef = doc(collection(db, COLLECTIONS.resources));
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.resource_created",
+    targetType: "resource",
+    targetId: resourceRef.id,
+    clubId: input.clubId,
+  });
+  batch.set(resourceRef, {
     ...input,
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
+  return resourceRef.id;
 }
 
 export async function updateClubResource(
   resourceId: string,
+  clubId: string,
   input: UpdateResourceInput,
 ) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.resources, resourceId), {
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.resource_updated",
+    targetType: "resource",
+    targetId: resourceId,
+    clubId,
+  });
+  batch.update(doc(db, COLLECTIONS.resources, resourceId), {
     ...input,
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
 }
 
-export async function deleteClubResource(resourceId: string) {
+export async function deleteClubResource(resourceId: string, clubId: string) {
   const db = await getDb();
-  await deleteDoc(doc(db, COLLECTIONS.resources, resourceId));
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.resource_deleted",
+    targetType: "resource",
+    targetId: resourceId,
+    clubId,
+  });
+  batch.delete(doc(db, COLLECTIONS.resources, resourceId));
+  await batch.commit();
 }
 
 // Updates basic club profile information
@@ -223,10 +294,17 @@ export async function updateClubProfile(
   input: UpdateClubProfileInput,
 ) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.clubs, clubId), {
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.club_profile_updated",
+    targetType: "club",
+    targetId: clubId,
+    clubId,
+  });
+  batch.update(doc(db, COLLECTIONS.clubs, clubId), {
     ...input,
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
 }
 
 // ATOMIC MEMBERSHIP TRANSACTION: Updates request status, user profile, club member count, and notifications simultaneously
@@ -237,6 +315,11 @@ export async function updateJoinRequestStatus(
   const db = await getDb();
   const requestRef = doc(db, COLLECTIONS.joinRequests, requestId);
   const notificationRef = doc(collection(db, COLLECTIONS.notifications));
+  const audit = await prepareClientAuditLog(db, "clubOfficer", {
+    action: "officer.join_request_updated",
+    targetType: "joinRequest",
+    targetId: requestId,
+  });
 
   await runTransaction(db, async (transaction) => {
     const requestSnapshot = await transaction.get(requestRef);
@@ -292,6 +375,7 @@ export async function updateJoinRequestStatus(
       relatedHref: "/dashboard",
       createdAt: serverTimestamp(),
     });
+    transaction.set(audit.reference, audit.data);
   });
 }
 
@@ -309,8 +393,12 @@ export async function replyToInquiry(inquiryId: string, body: string) {
   const existingReplies = Array.isArray(inquiry.replies) ? inquiry.replies : [];
   const reply = buildOfficerReply(existingReplies, body);
 
-  const batch = writeBatch(db);
-  // Append reply and ensure inquiry status remains open
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.inquiry_replied",
+    targetType: "inquiry",
+    targetId: inquiryId,
+    clubId: String(inquiry.clubId ?? ""),
+  });
   batch.update(inquiryRef, {
     replies: [...existingReplies, reply],
     updatedAt: serverTimestamp(),
@@ -336,8 +424,14 @@ export async function replyToInquiry(inquiryId: string, body: string) {
 // Marks an inquiry as resolved
 export async function resolveInquiry(inquiryId: string) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.inquiries, inquiryId), {
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.inquiry_resolved",
+    targetType: "inquiry",
+    targetId: inquiryId,
+  });
+  batch.update(doc(db, COLLECTIONS.inquiries, inquiryId), {
     status: "resolved" satisfies InquiryStatus,
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
 }

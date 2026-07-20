@@ -13,7 +13,13 @@ const firestoreMocks = vi.hoisted(() => {
   };
 });
 
+const auditMocks = vi.hoisted(() => ({ prepare: vi.fn() }));
+
 vi.mock("@/lib/firebase/client", () => ({ db: {} }));
+vi.mock("@/lib/firebase/audit-logs", () => ({
+  createAuditedBatch: vi.fn(),
+  prepareClientAuditLog: auditMocks.prepare,
+}));
 
 vi.mock("firebase/firestore", () => ({
   addDoc: vi.fn(),
@@ -44,6 +50,10 @@ import { updateJoinRequestStatus } from "@/lib/firebase/club-workflows";
 describe("membership approval transaction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    auditMocks.prepare.mockResolvedValue({
+      data: { action: "officer.join_request_updated" },
+      reference: { path: "auditLogs/audit-1" },
+    });
     firestoreMocks.transaction.get.mockResolvedValue({
       exists: () => true,
       data: () => ({
@@ -86,6 +96,10 @@ describe("membership approval transaction", () => {
         title: "Club request approved",
         userId: "student-1",
       }),
+    );
+    expect(firestoreMocks.transaction.set).toHaveBeenCalledWith(
+      { path: "auditLogs/audit-1" },
+      { action: "officer.join_request_updated" },
     );
   });
 });

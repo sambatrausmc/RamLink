@@ -6,8 +6,19 @@ const adminMocks = vi.hoisted(() => ({
   verifyIdToken: vi.fn(),
 }));
 
+const appCheckMocks = vi.hoisted(() => ({ verify: vi.fn() }));
+const rateLimitMocks = vi.hoisted(() => ({ consume: vi.fn() }));
+
 vi.mock("@/lib/firebase/admin", () => ({
   getAdminAuth: () => adminMocks,
+}));
+
+vi.mock("@/lib/server/app-check", () => ({
+  verifyAppCheckRequest: appCheckMocks.verify,
+}));
+
+vi.mock("@/lib/server/rate-limit", () => ({
+  consumeRateLimit: rateLimitMocks.consume,
 }));
 
 import { POST } from "@/app/api/auth/session/route";
@@ -25,6 +36,7 @@ function createRequest(csrfToken = createCsrfToken()) {
       cookie: `${CSRF_COOKIE_NAME}=${csrfToken}`,
       [CSRF_HEADER_NAME]: csrfToken,
       origin: "https://ramlink.example",
+      "x-request-id": "request_12345",
     },
   });
 }
@@ -42,6 +54,8 @@ function verifiedToken(overrides: Record<string, unknown> = {}) {
 describe("Firebase server session creation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    appCheckMocks.verify.mockResolvedValue(true);
+    rateLimitMocks.consume.mockResolvedValue({ allowed: true });
     adminMocks.verifyIdToken.mockResolvedValue(verifiedToken());
     adminMocks.createSessionCookie.mockResolvedValue("signed-session-cookie");
   });
@@ -60,6 +74,7 @@ describe("Firebase server session creation", () => {
     );
     expect(response.headers.get("set-cookie")).toContain("HttpOnly");
     expect(response.headers.get("set-cookie")).toContain("SameSite=lax");
+    expect(response.headers.get("x-request-id")).toBe("request_12345");
   });
 
   it("rejects a request without valid CSRF proof", async () => {
@@ -71,6 +86,15 @@ describe("Firebase server session creation", () => {
     );
 
     expect(response.status).toBe(403);
+    expect(adminMocks.verifyIdToken).not.toHaveBeenCalled();
+  });
+
+  it("rejects a request without valid application proof", async () => {
+    appCheckMocks.verify.mockResolvedValue(false);
+
+    const response = await POST(createRequest());
+
+    expect(response.status).toBe(401);
     expect(adminMocks.verifyIdToken).not.toHaveBeenCalled();
   });
 
@@ -93,6 +117,19 @@ describe("Firebase server session creation", () => {
     const response = await POST(createRequest());
 
     expect(response.status).toBe(401);
+    expect(adminMocks.createSessionCookie).not.toHaveBeenCalled();
+  });
+
+  it("returns retry guidance after too many session requests", async () => {
+    rateLimitMocks.consume.mockResolvedValue({
+      allowed: false,
+      retryAfterSeconds: 90,
+    });
+
+    const response = await POST(createRequest());
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("90");
     expect(adminMocks.createSessionCookie).not.toHaveBeenCalled();
   });
 });

@@ -6,8 +6,16 @@ const authMocks = vi.hoisted(() => ({
   getIdToken: vi.fn(),
 }));
 
+const appCheckMocks = vi.hoisted(() => ({
+  getHeaders: vi.fn(),
+}));
+
 vi.mock("firebase/auth", () => ({
   getIdToken: authMocks.getIdToken,
+}));
+
+vi.mock("@/lib/firebase/app-check", () => ({
+  getAppCheckRequestHeaders: appCheckMocks.getHeaders,
 }));
 
 import {
@@ -21,6 +29,9 @@ describe("Firebase client and server session requests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authMocks.getIdToken.mockResolvedValue("fresh-id-token");
+    appCheckMocks.getHeaders.mockResolvedValue({
+      "X-Firebase-AppCheck": "app-check-token",
+    });
   });
 
   it("exchanges a refreshed ID token with CSRF protection", async () => {
@@ -43,6 +54,7 @@ describe("Firebase client and server session requests", () => {
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
+          "X-Firebase-AppCheck": "app-check-token",
           [CSRF_HEADER_NAME]: "csrf-token",
         }),
         body: JSON.stringify({ idToken: "fresh-id-token" }),
@@ -95,7 +107,10 @@ describe("Firebase client and server session requests", () => {
       "/api/auth/session",
       expect.objectContaining({
         method: "DELETE",
-        headers: { [CSRF_HEADER_NAME]: "csrf-token" },
+        headers: {
+          "X-Firebase-AppCheck": "app-check-token",
+          [CSRF_HEADER_NAME]: "csrf-token",
+        },
       }),
     );
   });

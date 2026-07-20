@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import type { DocumentReference, Firestore } from "firebase-admin/firestore";
+import {
+  FieldValue,
+  type DocumentReference,
+  type Firestore,
+} from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
+import { verifyAppCheckRequest } from "@/lib/server/app-check";
+import { consumeRateLimit } from "@/lib/server/rate-limit";
+import { getRequestId, logServerEvent } from "@/lib/server/logger";
 
 // List of Firestore collections and fields where the user owns records
 const ownedRecords = [
@@ -12,6 +19,18 @@ const ownedRecords = [
 ] as const;
 
 const deletionBatchSize = 400;
+
+function accountResponse(
+  requestId: string,
+  body: object,
+  status = 200,
+  headers: Record<string, string> = {},
+) {
+  return NextResponse.json(body, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Request-Id": requestId, ...headers },
+  });
+}
 
 function readStringIds(value: unknown) {
   return Array.isArray(value)
@@ -38,6 +57,7 @@ async function getOwnedRecordReferences(db: Firestore, uid: string) {
 
 async function reconcileProfileReferences(db: Firestore, uid: string) {
   const profileRef = db.collection(COLLECTIONS.users).doc(uid);
+  const auditRef = db.collection(COLLECTIONS.auditLogs).doc();
 
   await db.runTransaction(async (transaction) => {
     const profileSnapshot = await transaction.get(profileRef);
@@ -73,6 +93,17 @@ async function reconcileProfileReferences(db: Firestore, uid: string) {
       }
     });
 
+    const role = ["student", "clubOfficer", "admin"].includes(String(profile.role))
+      ? String(profile.role)
+      : "student";
+    transaction.set(auditRef, {
+      actorId: uid,
+      actorRole: role,
+      action: "account.deleted",
+      targetType: "user",
+      targetId: uid,
+      createdAt: FieldValue.serverTimestamp(),
+    });
     transaction.delete(profileRef);
   });
 }
@@ -100,9 +131,17 @@ function isMissingAuthUser(error: unknown) {
 }
 
 export async function DELETE(request: Request) {
+  const requestId = getRequestId(request);
+  if (!(await verifyAppCheckRequest(request))) {
+    logServerEvent("warn", "app_check_rejected", requestId, {
+      operation: "account_delete",
+    });
+    return accountResponse(requestId, { error: "Invalid application token." }, 401);
+  }
+
   const authorization = request.headers.get("authorization");
   if (!authorization?.startsWith("Bearer ")) {
-    return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+    return accountResponse(requestId, { error: "Authentication required." }, 401);
   }
 
   const token = authorization.slice("Bearer ".length);
@@ -111,7 +150,29 @@ export async function DELETE(request: Request) {
   try {
     decodedToken = await getAdminAuth().verifyIdToken(token);
   } catch {
-    return NextResponse.json({ error: "Invalid authentication token." }, { status: 401 });
+    logServerEvent("warn", "account_delete_rejected", requestId, {
+      reason: "invalid_authentication",
+    });
+    return accountResponse(requestId, { error: "Invalid authentication token." }, 401);
+  }
+
+  const rateLimit = await consumeRateLimit({
+    scope: "account-delete",
+    subject: decodedToken.uid,
+    limit: 5,
+    windowSeconds: 60 * 60,
+  });
+  if (!rateLimit.allowed) {
+    logServerEvent("warn", "rate_limit_rejected", requestId, {
+      operation: "account_delete",
+      retryAfterSeconds: rateLimit.retryAfterSeconds,
+    });
+    return accountResponse(
+      requestId,
+      { error: "Too many account deletion requests. Try again later." },
+      429,
+      { "Retry-After": String(rateLimit.retryAfterSeconds) },
+    );
   }
 
   const currentTime = Math.floor(Date.now() / 1000);
@@ -119,9 +180,10 @@ export async function DELETE(request: Request) {
     typeof decodedToken.auth_time !== "number" ||
     currentTime - decodedToken.auth_time > 5 * 60
   ) {
-    return NextResponse.json(
+    return accountResponse(
+      requestId,
       { error: "Recent authentication is required." },
-      { status: 409 },
+      409,
     );
   }
 
@@ -142,8 +204,14 @@ export async function DELETE(request: Request) {
       }
     }
 
-    return NextResponse.json({ deleted: true });
+    logServerEvent("info", "account_deleted", requestId);
+    return accountResponse(requestId, { deleted: true });
   } catch {
-    return NextResponse.json({ error: "Unable to delete this account." }, { status: 500 });
+    logServerEvent("error", "account_delete_failed", requestId);
+    return accountResponse(
+      requestId,
+      { error: "Unable to delete this account." },
+      500,
+    );
   }
 }
