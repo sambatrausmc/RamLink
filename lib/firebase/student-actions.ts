@@ -9,7 +9,6 @@ import {
   serverTimestamp,
   updateDoc,
   where,
-  writeBatch,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
@@ -262,42 +261,25 @@ export async function cancelJoinRequest(requestId: string) {
 export async function createClubInquiry(
   input: ClubInquiryInput,
 ): Promise<ClubInquiry> {
-  const db = await getDb();
-  const inquiry = {
-    clubId: input.clubId,
-    clubName: input.clubName ?? "",
-    studentId: input.userId,
-    studentName: input.studentName ?? "Student",
-    subject: input.subject,
-    message: input.message,
-    status: "open" as InquiryStatus,
-    createdAt: serverTimestamp(),
-    replies: [],
-  };
-
-  const inquiryReference = doc(collection(db, COLLECTIONS.inquiries));
-  const notificationReference = doc(collection(db, COLLECTIONS.notifications));
-  const batch = writeBatch(db);
-
-  batch.set(inquiryReference, inquiry);
-  batch.set(notificationReference, {
-    userId: input.userId,
-    clubId: input.clubId,
-    title: "Question sent",
-    body: "Your question was sent to the official club inbox.",
-    type: "inquiry",
-    status: "unread",
-    relatedHref: "/notifications",
-    createdAt: serverTimestamp(),
+  const inquiry = await protectedApiRequest<{
+    clubId: string;
+    id: string;
+    status: InquiryStatus;
+  }>("/api/student/inquiries", {
+    method: "POST",
+    body: JSON.stringify({
+      clubId: input.clubId,
+      subject: input.subject,
+      message: input.message,
+    }),
   });
-  await batch.commit();
 
   return {
-    id: inquiryReference.id,
+    id: inquiry.id,
     clubId: inquiry.clubId,
-    studentId: inquiry.studentId,
-    subject: inquiry.subject,
-    message: inquiry.message,
+    studentId: input.userId,
+    subject: input.subject,
+    message: input.message,
     status: readInquiryStatus(inquiry.status),
     createdAt: "Just now",
     replies: [],

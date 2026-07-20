@@ -785,12 +785,7 @@ service cloud.firestore {
     }
 
     match /inquiries/{inquiryId} {
-      allow create: if isVerifiedFarmingdaleUser() &&
-        validInquiryDocument(request.resource.data) &&
-        request.resource.data.studentId == request.auth.uid &&
-        request.resource.data.status == "open" &&
-        request.resource.data.replies == [] &&
-        request.resource.data.createdAt == request.time;
+      allow create: if false;
       allow read: if isVerifiedFarmingdaleUser() &&
         (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
       allow update: if managesClub(resource.data.clubId) &&

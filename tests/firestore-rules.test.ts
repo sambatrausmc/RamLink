@@ -569,7 +569,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
   it("validates student inquiry and notification payloads", async () => {
     const studentDb = verifiedContext("student-1").firestore();
 
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(studentDb, "inquiries/student-inquiry"), {
         clubId: "club-1",
         clubName: "Campus Club",
