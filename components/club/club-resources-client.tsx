@@ -49,7 +49,8 @@ export function ClubResourcesClient() {
     if (!clubId) return;
     setSaving(true);
     setFeedback("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       await createClubResource({
         clubId,
@@ -58,7 +59,7 @@ export function ClubResourcesClient() {
         type: parseResourceType(String(form.get("type") ?? "Link")),
         url: String(form.get("url") ?? "").trim(),
       });
-      event.currentTarget.reset();
+      formElement.reset();
       await loadResources(clubId);
       setFeedback("Resource saved to Firestore.");
     } catch {

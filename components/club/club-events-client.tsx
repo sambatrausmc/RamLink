@@ -64,7 +64,8 @@ export function ClubEventsClient() {
     if (!clubId || !club) return;
     setSaving(true);
     setFeedback("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       await createClubEvent({
         clubId,
@@ -76,7 +77,7 @@ export function ClubEventsClient() {
         endTime: String(form.get("endTime") ?? ""),
         location: String(form.get("location") ?? "").trim(),
       });
-      event.currentTarget.reset();
+      formElement.reset();
       await loadEvents(clubId);
       setFeedback("Event published to Firestore.");
     } catch {
