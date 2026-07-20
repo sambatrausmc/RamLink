@@ -26,6 +26,7 @@ export type LoginInput = {
   email: string;
   password: string;
 };
+export const MINIMUM_PASSWORD_LENGTH = 12;
 async function getAuthClient() {
   const { auth, ensureAuthPersistence } = await import("@/lib/firebase/client");
   await ensureAuthPersistence();
@@ -42,6 +43,9 @@ function getVerificationActionSettings() {
 export async function registerStudentAccount(input: RegisterStudentInput) {
   const email = requireFarmingdaleEmail(input.email);
   const displayName = input.displayName.trim();
+  if (input.password.length < MINIMUM_PASSWORD_LENGTH) {
+    throw new Error(`Password must be at least ${MINIMUM_PASSWORD_LENGTH} characters.`);
+  }
   const auth = await getAuthClient();
   const credential = await createUserWithEmailAndPassword(
     auth,

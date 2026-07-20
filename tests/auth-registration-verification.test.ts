@@ -59,13 +59,13 @@ describe("verified student registration", () => {
     await registerStudentAccount({
       displayName: "  Avery Morgan  ",
       email: " Avery@Farmingdale.edu ",
-      password: "password123",
+      password: "password1234",
     });
 
     expect(mocks.createUser).toHaveBeenCalledWith(
       mocks.auth,
       "avery@farmingdale.edu",
-      "password123",
+      "password1234",
     );
     expect(mocks.updateProfile).toHaveBeenCalledWith(mocks.user, {
       displayName: "Avery Morgan",
@@ -86,7 +86,7 @@ describe("verified student registration", () => {
       registerStudentAccount({
         displayName: "Avery Morgan",
         email: "avery@example.com",
-        password: "password123",
+        password: "password1234",
       }),
     ).rejects.toThrow("Use a valid @farmingdale.edu email address.");
     expect(mocks.createUser).not.toHaveBeenCalled();
@@ -102,7 +102,7 @@ describe("verified student registration", () => {
       registerStudentAccount({
         displayName: "Avery Morgan",
         email: "avery@farmingdale.edu",
-        password: "password123",
+        password: "password1234",
       }),
     ).rejects.toThrow("Verification service unavailable");
   });
@@ -127,6 +127,18 @@ describe("verified student registration", () => {
       mocks.auth,
       "student@farmingdale.edu",
     );
+  });
+
+  it("rejects passwords shorter than twelve characters", async () => {
+    const { registerStudentAccount } = await import("@/lib/firebase/auth");
+    await expect(
+      registerStudentAccount({
+        displayName: "Avery Morgan",
+        email: "avery@farmingdale.edu",
+        password: "short-pass",
+      }),
+    ).rejects.toThrow("at least 12 characters");
+    expect(mocks.createUser).not.toHaveBeenCalled();
   });
 
   it("blocks repeated password-reset email requests during the cooldown", async () => {

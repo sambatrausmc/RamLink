@@ -4,9 +4,11 @@ import Link from "next/link";
 import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuthEmailCooldown } from "@/components/auth/use-auth-email-cooldown";
 import { resetPasswordForEmail } from "@/lib/firebase/auth";
 
 export function PasswordResetForm() {
+  const cooldown = useAuthEmailCooldown("password-reset");
   const [email, setEmail] = useState("");
   const [feedback, setFeedback] = useState("");
   const [sending, setSending] = useState(false);
@@ -17,6 +19,7 @@ export function PasswordResetForm() {
     setFeedback("");
     try {
       await resetPasswordForEmail(email.trim());
+      cooldown.refresh();
       setFeedback("Check your email for a password reset link.");
     } catch {
       setFeedback("Unable to send a reset email. Check the address and try again.");
@@ -38,9 +41,17 @@ export function PasswordResetForm() {
         />
       </label>
       {feedback ? <p className="text-sm font-medium text-brand-forest">{feedback}</p> : null}
-      <Button className="w-full" type="submit" disabled={sending}>
+      <Button
+        className="w-full"
+        type="submit"
+        disabled={sending || cooldown.remaining > 0}
+      >
         <Mail className="h-4 w-4" />
-        {sending ? "Sending..." : "Send reset email"}
+        {sending
+          ? "Sending..."
+          : cooldown.remaining > 0
+            ? `Try again in ${cooldown.remaining}s`
+            : "Send reset email"}
       </Button>
       <Link className="block text-center text-sm font-semibold text-brand-forest" href="/login">
         Return to sign in
