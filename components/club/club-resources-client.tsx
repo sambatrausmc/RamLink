@@ -27,6 +27,18 @@ export function ClubResourcesClient() {
     setResources(await getResourcesForClub(activeClubId));
   }
 
+  async function refreshAfterMutation(
+    activeClubId: string,
+    successMessage: string,
+  ) {
+    try {
+      await loadResources(activeClubId);
+      setFeedback(successMessage);
+    } catch {
+      setFeedback(`${successMessage} Reload the page to refresh the list.`);
+    }
+  }
+
   useEffect(() => {
     let active = true;
     async function load() {
@@ -60,8 +72,7 @@ export function ClubResourcesClient() {
         url: String(form.get("url") ?? "").trim(),
       });
       formElement.reset();
-      await loadResources(clubId);
-      setFeedback("Resource saved to Firestore.");
+      await refreshAfterMutation(clubId, "Resource saved to Firestore.");
     } catch {
       setFeedback("Unable to add the resource.");
     } finally {
@@ -83,8 +94,7 @@ export function ClubResourcesClient() {
         type: parseResourceType(String(form.get("type") ?? "Link")),
         url: String(form.get("url") ?? "").trim(),
       });
-      await loadResources(clubId);
-      setFeedback("Resource updated.");
+      await refreshAfterMutation(clubId, "Resource updated.");
     } catch {
       setFeedback("Unable to update the resource.");
     }
@@ -94,8 +104,7 @@ export function ClubResourcesClient() {
     if (!clubId || !window.confirm("Delete this resource?")) return;
     try {
       await deleteClubResource(resourceId, clubId);
-      await loadResources(clubId);
-      setFeedback("Resource deleted.");
+      await refreshAfterMutation(clubId, "Resource deleted.");
     } catch {
       setFeedback("Unable to delete the resource.");
     }

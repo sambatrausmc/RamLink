@@ -36,6 +36,18 @@ export function ClubEventsClient() {
     setEvents(nextEvents);
   }
 
+  async function refreshAfterMutation(
+    activeClubId: string,
+    successMessage: string,
+  ) {
+    try {
+      await loadEvents(activeClubId);
+      setFeedback(successMessage);
+    } catch {
+      setFeedback(`${successMessage} Reload the page to refresh the list.`);
+    }
+  }
+
   useEffect(() => {
     let active = true;
     async function load() {
@@ -78,8 +90,7 @@ export function ClubEventsClient() {
         location: String(form.get("location") ?? "").trim(),
       });
       formElement.reset();
-      await loadEvents(clubId);
-      setFeedback("Event published to Firestore.");
+      await refreshAfterMutation(clubId, "Event published to Firestore.");
     } catch {
       setFeedback("Unable to create the event.");
     } finally {
@@ -103,8 +114,7 @@ export function ClubEventsClient() {
         endTime: String(form.get("endTime") ?? ""),
         location: String(form.get("location") ?? "").trim(),
       });
-      await loadEvents(clubId);
-      setFeedback("Event updated.");
+      await refreshAfterMutation(clubId, "Event updated.");
     } catch {
       setFeedback("Unable to update the event.");
     }
@@ -114,8 +124,7 @@ export function ClubEventsClient() {
     if (!clubId || !window.confirm("Delete this event?")) return;
     try {
       await deleteClubEvent(eventId, clubId);
-      await loadEvents(clubId);
-      setFeedback("Event deleted.");
+      await refreshAfterMutation(clubId, "Event deleted.");
     } catch {
       setFeedback("Unable to delete the event.");
     }

@@ -35,6 +35,18 @@ export function ClubAnnouncementsClient() {
     setAnnouncements(nextAnnouncements);
   }
 
+  async function refreshAfterMutation(
+    activeClubId: string,
+    successMessage: string,
+  ) {
+    try {
+      await loadAnnouncements(activeClubId);
+      setFeedback(successMessage);
+    } catch {
+      setFeedback(`${successMessage} Reload the page to refresh the list.`);
+    }
+  }
+
   useEffect(() => {
     let active = true;
     async function load() {
@@ -74,8 +86,10 @@ export function ClubAnnouncementsClient() {
         priority: form.get("priority") === "important" ? "important" : "normal",
       });
       formElement.reset();
-      await loadAnnouncements(clubId);
-      setFeedback("Announcement published to Firestore.");
+      await refreshAfterMutation(
+        clubId,
+        "Announcement published to Firestore.",
+      );
     } catch (error) {
       setFeedback(
         error instanceof Error
@@ -100,8 +114,7 @@ export function ClubAnnouncementsClient() {
         body: String(form.get("body") ?? "").trim(),
         priority: form.get("priority") === "important" ? "important" : "normal",
       });
-      await loadAnnouncements(clubId);
-      setFeedback("Announcement updated.");
+      await refreshAfterMutation(clubId, "Announcement updated.");
     } catch {
       setFeedback("Unable to update the announcement.");
     }
@@ -111,8 +124,7 @@ export function ClubAnnouncementsClient() {
     if (!clubId || !window.confirm("Delete this announcement?")) return;
     try {
       await deleteClubAnnouncement(announcementId, clubId);
-      await loadAnnouncements(clubId);
-      setFeedback("Announcement deleted.");
+      await refreshAfterMutation(clubId, "Announcement deleted.");
     } catch {
       setFeedback("Unable to delete the announcement.");
     }
