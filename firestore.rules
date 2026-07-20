@@ -241,6 +241,84 @@ service cloud.firestore {
         validCategory(data.category);
     }
 
+    function validStudentEditableFields(data) {
+      return validText(data.displayName, 100) &&
+        data.major is string && data.major.size() <= 120 &&
+        data.classYear is string && data.classYear.size() <= 60 &&
+        data.interests is list && data.interests.size() <= 20 &&
+        data.savedClubIds is list && data.savedClubIds.size() <= 100 &&
+        data.savedEventIds is list && data.savedEventIds.size() <= 100 &&
+        data.updatedAt == request.time;
+    }
+
+    function validInquiryDocument(data) {
+      return data.keys().hasAll([
+          "clubId",
+          "clubName",
+          "studentId",
+          "studentName",
+          "subject",
+          "message",
+          "status",
+          "createdAt",
+          "replies"
+        ]) &&
+        data.keys().hasOnly([
+          "clubId",
+          "clubName",
+          "studentId",
+          "studentName",
+          "subject",
+          "message",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "replies"
+        ]) &&
+        validText(data.clubId, 120) &&
+        validText(data.clubName, 160) &&
+        validText(data.studentId, 128) &&
+        validText(data.studentName, 100) &&
+        validText(data.subject, 160) &&
+        validText(data.message, 2000) &&
+        data.status in ["open", "resolved"] &&
+        data.createdAt is timestamp &&
+        (!("updatedAt" in data) || data.updatedAt is timestamp) &&
+        data.replies is list && data.replies.size() <= 50;
+    }
+
+    function validNotificationDocument(data) {
+      return data.keys().hasAll([
+          "userId",
+          "title",
+          "body",
+          "type",
+          "status",
+          "relatedHref",
+          "createdAt"
+        ]) &&
+        data.keys().hasOnly([
+          "userId",
+          "clubId",
+          "title",
+          "body",
+          "type",
+          "status",
+          "relatedHref",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        validText(data.userId, 128) &&
+        (!("clubId" in data) || validText(data.clubId, 120)) &&
+        validText(data.title, 160) &&
+        validText(data.body, 1000) &&
+        data.type in ["event", "joinRequest", "announcement", "inquiry", "resource"] &&
+        data.status in ["read", "unread"] &&
+        validText(data.relatedHref, 500) &&
+        data.createdAt is timestamp &&
+        (!("updatedAt" in data) || data.updatedAt is timestamp);
+    }
+
     // Couples officer membership edits to the matching request and club count.
     function officerUpdatesManagedMembership(userId) {
       let changedFields = request.resource.data.diff(resource.data).affectedKeys();
@@ -298,6 +376,7 @@ service cloud.firestore {
       let changedFields = request.resource.data.diff(resource.data).affectedKeys();
       return isSelf(userId) &&
         request.resource.data.role == resource.data.role &&
+        validStudentEditableFields(request.resource.data) &&
         changedFields.hasOnly([
           "displayName",
           "major",
@@ -350,9 +429,9 @@ service cloud.firestore {
         data.displayName is string &&
         data.displayName.size() > 0 &&
         data.displayName.size() <= 100 &&
-        data.major is string &&
-        data.classYear is string &&
-        data.interests is list &&
+        data.major is string && data.major.size() <= 120 &&
+        data.classYear is string && data.classYear.size() <= 60 &&
+        data.interests is list && data.interests.size() <= 20 &&
         data.joinedClubIds == [] &&
         data.savedClubIds == [] &&
         data.savedEventIds == [] &&
@@ -445,11 +524,11 @@ service cloud.firestore {
         ]) &&
         requestId == request.auth.uid + "_" + data.clubId &&
         data.clubId is string &&
-        data.clubId.size() > 0 &&
-        data.clubName is string &&
+        data.clubId.size() > 0 && data.clubId.size() <= 120 &&
+        validText(data.clubName, 160) &&
         data.studentId == request.auth.uid &&
-        data.studentName is string &&
-        data.message is string &&
+        validText(data.studentName, 100) &&
+        data.message is string && data.message.size() <= 1000 &&
         data.status == "pending" &&
         data.createdAt == request.time &&
         data.updatedAt == request.time;
@@ -464,6 +543,10 @@ service cloud.firestore {
         requestId == request.auth.uid + "_" + resource.data.clubId &&
         resource.data.status == "rejected" &&
         request.resource.data.status == "pending" &&
+        request.resource.data.message is string &&
+        request.resource.data.message.size() <= 1000 &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time &&
         changedFields.hasOnly(["message", "status", "createdAt", "updatedAt"]);
     }
 
@@ -759,14 +842,19 @@ service cloud.firestore {
 
     match /inquiries/{inquiryId} {
       allow create: if isVerifiedFarmingdaleUser() &&
+        validInquiryDocument(request.resource.data) &&
         request.resource.data.studentId == request.auth.uid &&
-        request.resource.data.status == "open";
+        request.resource.data.status == "open" &&
+        request.resource.data.replies == [] &&
+        request.resource.data.createdAt == request.time;
       allow read: if isVerifiedFarmingdaleUser() &&
         (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
       allow update: if managesClub(resource.data.clubId) &&
+        validInquiryDocument(request.resource.data) &&
         request.resource.data.clubId == resource.data.clubId &&
         request.resource.data.studentId == resource.data.studentId &&
         request.resource.data.status in ["open", "resolved"] &&
+        request.resource.data.updatedAt == request.time &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["replies", "status", "updatedAt"]);
       allow delete: if isAdmin();
@@ -775,6 +863,8 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       // Allows self-notifications, admin alerts, or officer alerts sent from managed clubs
       allow create: if isVerifiedFarmingdaleUser() &&
+        validNotificationDocument(request.resource.data) &&
+        request.resource.data.createdAt == request.time &&
         (request.resource.data.userId == request.auth.uid ||
           isAdmin() ||
           ("clubId" in request.resource.data && managesClub(request.resource.data.clubId)));
@@ -782,8 +872,10 @@ service cloud.firestore {
         resource.data.userId == request.auth.uid;
       // Users can only mark their own notifications read/unread
       allow update: if isVerifiedFarmingdaleUser() &&
+        validNotificationDocument(request.resource.data) &&
         resource.data.userId == request.auth.uid &&
         request.resource.data.status in ["read", "unread"] &&
+        request.resource.data.updatedAt == request.time &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"]);
       allow delete: if isAdmin();
     }

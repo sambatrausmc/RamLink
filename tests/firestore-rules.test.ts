@@ -55,12 +55,20 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
       const seededAt = new Date("2026-07-01T12:00:00Z");
 
       await setDoc(doc(database, "users/student-1"), {
+        id: "student-1",
         role: "student",
         displayName: "Student One",
+        email: "student-1@farmingdale.edu",
+        major: "Computer Programming",
+        classYear: "Senior",
+        interests: ["Technology"],
         joinedClubIds: [],
         savedClubIds: [],
         savedEventIds: [],
         rsvpedEventIds: [],
+        managedClubIds: [],
+        createdAt: seededAt,
+        updatedAt: seededAt,
       });
 
       await setDoc(doc(database, "users/officer-1"), {
@@ -114,8 +122,13 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
 
       await setDoc(doc(database, "inquiries/inquiry-1"), {
         clubId: "club-1",
+        clubName: "Campus Club",
         studentId: "student-1",
+        studentName: "Student One",
+        subject: "Membership question",
+        message: "When does the club meet?",
         status: "open",
+        createdAt: seededAt,
         replies: [],
       });
 
@@ -123,8 +136,10 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         userId: "student-1",
         title: "Request update",
         body: "Your request has been reviewed.",
-        type: "join_request",
+        type: "joinRequest",
         status: "unread",
+        relatedHref: "/dashboard",
+        createdAt: seededAt,
       });
 
       await setDoc(doc(database, "events/event-1"), {
@@ -167,6 +182,20 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         updatedAt: seededAt,
       });
 
+      await setDoc(doc(database, "clubs/club-2"), {
+        name: "Second Campus Club",
+        shortName: "SCC",
+        category: "Leadership",
+        description: "A second student organization.",
+        meetingSchedule: "Wednesdays at 4:00 PM",
+        meetingLocation: "Campus Center",
+        contactEmail: "second-club@farmingdale.edu",
+        tags: ["Leadership"],
+        status: "active",
+        memberCount: 0,
+        updatedAt: seededAt,
+      });
+
       await setDoc(doc(database, "announcements/announcement-1"), {
         clubId: "club-1",
         clubName: "Campus Club",
@@ -205,6 +234,20 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     await assertFails(
       updateDoc(studentRef, {
         joinedClubIds: ["club-1"],
+        updatedAt: serverTimestamp(),
+      }),
+    );
+
+    await assertFails(
+      updateDoc(studentRef, {
+        displayName: "",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+
+    await assertFails(
+      updateDoc(studentRef, {
+        interests: Array.from({ length: 21 }, (_, index) => `Interest ${index}`),
         updatedAt: serverTimestamp(),
       }),
     );
@@ -373,6 +416,13 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     const requestRef = doc(studentDb, "joinRequests/student-1_club-2");
     await assertSucceeds(setDoc(requestRef, requestData));
     await assertFails(setDoc(requestRef, requestData));
+    await assertFails(
+      setDoc(doc(studentDb, "joinRequests/student-1_club-1"), {
+        ...requestData,
+        clubId: "club-1",
+        message: "x".repeat(1001),
+      }),
+    );
   });
 
   it("allows rejected requests to reopen without bypassing approval", async () => {
@@ -521,6 +571,49 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
       updateDoc(inquiryRef, {
         clubId: "club-2",
         updatedAt: serverTimestamp(),
+      }),
+    );
+  });
+
+  it("validates student inquiry and notification payloads", async () => {
+    const studentDb = verifiedContext("student-1").firestore();
+
+    await assertSucceeds(
+      setDoc(doc(studentDb, "inquiries/student-inquiry"), {
+        clubId: "club-1",
+        clubName: "Campus Club",
+        studentId: "student-1",
+        studentName: "Student One",
+        subject: "Meeting question",
+        message: "May I attend the next meeting?",
+        status: "open",
+        createdAt: serverTimestamp(),
+        replies: [],
+      }),
+    );
+    await assertFails(
+      setDoc(doc(studentDb, "inquiries/forged-inquiry"), {
+        clubId: "club-1",
+        clubName: "Campus Club",
+        studentId: "student-1",
+        studentName: "Student One",
+        subject: "Meeting question",
+        message: "May I attend the next meeting?",
+        status: "resolved",
+        createdAt: serverTimestamp(),
+        replies: [],
+        internalNote: "Unexpected field",
+      }),
+    );
+    await assertFails(
+      setDoc(doc(studentDb, "notifications/invalid-notification"), {
+        userId: "student-1",
+        title: "Invalid notification",
+        body: "This payload uses an unsupported type.",
+        type: "system",
+        status: "unread",
+        relatedHref: "/dashboard",
+        createdAt: serverTimestamp(),
       }),
     );
   });
