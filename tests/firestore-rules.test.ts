@@ -13,6 +13,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   query,
   serverTimestamp,
   setDoc,
@@ -362,7 +363,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
 
     const officerDb = verifiedContext("officer-1").firestore();
-    await assertSucceeds(
+    await assertFails(
       updateDoc(doc(officerDb, "joinRequests/student-1_club-1"), {
         status: "approved",
         updatedAt: serverTimestamp(),
@@ -379,11 +380,18 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
   });
 
-  it("allows officers to change status without changing request ownership", async () => {
+  it("allows rejection but blocks standalone membership approval", async () => {
     const officerDb = verifiedContext("officer-1").firestore();
     const requestRef = doc(officerDb, "joinRequests/request-1");
 
     await assertSucceeds(
+      updateDoc(requestRef, {
+        status: "rejected",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+
+    await assertFails(
       updateDoc(requestRef, {
         status: "approved",
         updatedAt: serverTimestamp(),
@@ -393,6 +401,58 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     await assertFails(
       updateDoc(requestRef, {
         studentId: "student-2",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+  });
+
+  it("allows managed membership approval as one synchronized batch", async () => {
+    const officerDb = verifiedContext("officer-1").firestore();
+    const mutation = {
+      requestId: "request-1",
+      studentId: "student-1",
+      clubId: "club-1",
+      countChange: 1,
+    };
+    const batch = writeBatch(officerDb);
+
+    batch.update(doc(officerDb, "joinRequests/request-1"), {
+      status: "approved",
+      updatedAt: serverTimestamp(),
+    });
+    batch.update(doc(officerDb, "users/student-1"), {
+      joinedClubIds: arrayUnion("club-1"),
+      membershipMutation: mutation,
+      updatedAt: serverTimestamp(),
+    });
+    batch.update(doc(officerDb, "clubs/club-1"), {
+      memberCount: increment(1),
+      membershipMutation: mutation,
+      updatedAt: serverTimestamp(),
+    });
+
+    await assertSucceeds(batch.commit());
+
+    const [studentSnapshot, clubSnapshot] = await Promise.all([
+      getDoc(doc(officerDb, "users/student-1")),
+      getDoc(doc(officerDb, "clubs/club-1")),
+    ]);
+    expect(studentSnapshot.data()?.joinedClubIds).toContain("club-1");
+    expect(clubSnapshot.data()?.memberCount).toBe(2);
+  });
+
+  it("blocks standalone officer membership and count changes", async () => {
+    const officerDb = verifiedContext("officer-1").firestore();
+
+    await assertFails(
+      updateDoc(doc(officerDb, "users/student-1"), {
+        joinedClubIds: arrayUnion("club-1"),
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(officerDb, "clubs/club-1"), {
+        memberCount: increment(1),
         updatedAt: serverTimestamp(),
       }),
     );
