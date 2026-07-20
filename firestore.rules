@@ -302,6 +302,63 @@ service cloud.firestore {
         data.updatedAt == request.time;
     }
 
+    function validNewAuditLog() {
+      let data = request.resource.data;
+      let adminActions = [
+        "admin.club_created",
+        "admin.club_status_updated",
+        "admin.report_status_updated",
+        "admin.user_clubs_updated",
+        "admin.user_role_updated"
+      ];
+      let officerActions = [
+        "officer.announcement_created",
+        "officer.announcement_deleted",
+        "officer.announcement_updated",
+        "officer.club_profile_updated",
+        "officer.event_created",
+        "officer.event_deleted",
+        "officer.event_updated",
+        "officer.inquiry_replied",
+        "officer.inquiry_resolved",
+        "officer.join_request_updated",
+        "officer.resource_created",
+        "officer.resource_deleted",
+        "officer.resource_updated"
+      ];
+      return isVerifiedFarmingdaleUser() &&
+        data.keys().hasAll([
+          "actorId",
+          "actorRole",
+          "action",
+          "targetType",
+          "targetId",
+          "createdAt"
+        ]) &&
+        data.keys().hasOnly([
+          "actorId",
+          "actorRole",
+          "action",
+          "targetType",
+          "targetId",
+          "clubId",
+          "createdAt"
+        ]) &&
+        data.actorId == request.auth.uid &&
+        data.actorRole == userDoc().data.role &&
+        data.action is string &&
+        data.targetType is string &&
+        data.targetType.size() > 0 &&
+        data.targetType.size() <= 80 &&
+        data.targetId is string &&
+        data.targetId.size() > 0 &&
+        data.targetId.size() <= 160 &&
+        (!("clubId" in data) || data.clubId is string) &&
+        data.createdAt == request.time &&
+        ((data.actorRole == "admin" && data.action in adminActions) ||
+          (data.actorRole == "clubOfficer" && data.action in officerActions));
+    }
+
     match /clubs/{clubId} {
       allow read: if true;
       allow create, delete: if isAdmin();
@@ -402,6 +459,12 @@ service cloud.firestore {
     match /reports/{reportId} {
       allow create: if validNewReport();
       allow read, update, delete: if isAdmin();
+    }
+
+    match /auditLogs/{auditLogId} {
+      allow create: if validNewAuditLog();
+      allow read: if isAdmin();
+      allow update, delete: if false;
     }
 
     match /rateLimits/{rateLimitId} {

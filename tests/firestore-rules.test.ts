@@ -574,4 +574,38 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
       setDoc(doc(adminDb, "rateLimits/session-record"), { count: 1 }),
     );
   });
+
+  it("creates immutable audit records that only administrators can read", async () => {
+    const adminDb = verifiedContext("admin-1").firestore();
+    const studentDb = verifiedContext("student-1").firestore();
+    const auditRef = doc(adminDb, "auditLogs/audit-1");
+    const auditData = {
+      actorId: "admin-1",
+      actorRole: "admin",
+      action: "admin.user_role_updated",
+      targetType: "user",
+      targetId: "student-1",
+      createdAt: serverTimestamp(),
+    };
+
+    await assertSucceeds(setDoc(auditRef, auditData));
+    await assertSucceeds(getDoc(auditRef));
+    await assertFails(getDoc(doc(studentDb, "auditLogs/audit-1")));
+    await assertFails(updateDoc(auditRef, { targetId: "student-2" }));
+    await assertFails(deleteDoc(auditRef));
+
+    await assertFails(
+      setDoc(doc(studentDb, "auditLogs/audit-2"), {
+        ...auditData,
+        actorId: "student-1",
+        actorRole: "student",
+      }),
+    );
+    await assertFails(
+      setDoc(doc(adminDb, "auditLogs/audit-3"), {
+        ...auditData,
+        actorId: "another-admin",
+      }),
+    );
+  });
 });
