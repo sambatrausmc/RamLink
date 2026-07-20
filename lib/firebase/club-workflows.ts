@@ -339,20 +339,38 @@ export async function updateJoinRequestStatus(
     });
 
     if (status === "approved" && previousStatus !== "approved") {
+      const membershipMutation = {
+        requestId,
+        studentId,
+        clubId,
+        countChange: 1,
+      };
       transaction.update(doc(db, COLLECTIONS.users, studentId), {
         joinedClubIds: arrayUnion(clubId),
+        membershipMutation,
         updatedAt: serverTimestamp(),
       });
       transaction.update(doc(db, COLLECTIONS.clubs, clubId), {
         memberCount: increment(1),
+        membershipMutation,
+        updatedAt: serverTimestamp(),
       });
     } else if (status !== "approved" && previousStatus === "approved") {
+      const membershipMutation = {
+        requestId,
+        studentId,
+        clubId,
+        countChange: -1,
+      };
       transaction.update(doc(db, COLLECTIONS.users, studentId), {
         joinedClubIds: arrayRemove(clubId),
+        membershipMutation,
         updatedAt: serverTimestamp(),
       });
       transaction.update(doc(db, COLLECTIONS.clubs, clubId), {
         memberCount: increment(-1),
+        membershipMutation,
+        updatedAt: serverTimestamp(),
       });
     }
 
