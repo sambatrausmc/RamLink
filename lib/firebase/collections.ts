@@ -9,6 +9,7 @@ export const COLLECTIONS = {
   notifications: "notifications",
   reports: "reports",
   interests: "interests",
+  rateLimits: "rateLimits",
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

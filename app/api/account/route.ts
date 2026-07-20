@@ -3,6 +3,7 @@ import type { DocumentReference, Firestore } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import { verifyAppCheckRequest } from "@/lib/server/app-check";
+import { consumeRateLimit } from "@/lib/server/rate-limit";
 
 // List of Firestore collections and fields where the user owns records
 const ownedRecords = [
@@ -120,6 +121,22 @@ export async function DELETE(request: Request) {
     decodedToken = await getAdminAuth().verifyIdToken(token);
   } catch {
     return NextResponse.json({ error: "Invalid authentication token." }, { status: 401 });
+  }
+
+  const rateLimit = await consumeRateLimit({
+    scope: "account-delete",
+    subject: decodedToken.uid,
+    limit: 5,
+    windowSeconds: 60 * 60,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many account deletion requests. Try again later." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+      },
+    );
   }
 
   const currentTime = Math.floor(Date.now() / 1000);

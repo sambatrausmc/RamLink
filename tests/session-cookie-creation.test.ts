@@ -7,6 +7,7 @@ const adminMocks = vi.hoisted(() => ({
 }));
 
 const appCheckMocks = vi.hoisted(() => ({ verify: vi.fn() }));
+const rateLimitMocks = vi.hoisted(() => ({ consume: vi.fn() }));
 
 vi.mock("@/lib/firebase/admin", () => ({
   getAdminAuth: () => adminMocks,
@@ -14,6 +15,10 @@ vi.mock("@/lib/firebase/admin", () => ({
 
 vi.mock("@/lib/server/app-check", () => ({
   verifyAppCheckRequest: appCheckMocks.verify,
+}));
+
+vi.mock("@/lib/server/rate-limit", () => ({
+  consumeRateLimit: rateLimitMocks.consume,
 }));
 
 import { POST } from "@/app/api/auth/session/route";
@@ -49,6 +54,7 @@ describe("Firebase server session creation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     appCheckMocks.verify.mockResolvedValue(true);
+    rateLimitMocks.consume.mockResolvedValue({ allowed: true });
     adminMocks.verifyIdToken.mockResolvedValue(verifiedToken());
     adminMocks.createSessionCookie.mockResolvedValue("signed-session-cookie");
   });
@@ -109,6 +115,19 @@ describe("Firebase server session creation", () => {
     const response = await POST(createRequest());
 
     expect(response.status).toBe(401);
+    expect(adminMocks.createSessionCookie).not.toHaveBeenCalled();
+  });
+
+  it("returns retry guidance after too many session requests", async () => {
+    rateLimitMocks.consume.mockResolvedValue({
+      allowed: false,
+      retryAfterSeconds: 90,
+    });
+
+    const response = await POST(createRequest());
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("90");
     expect(adminMocks.createSessionCookie).not.toHaveBeenCalled();
   });
 });

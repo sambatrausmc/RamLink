@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebase/admin";
 import { CSRF_COOKIE_NAME, verifyCsrfRequest } from "@/lib/server/csrf";
 import { verifyAppCheckRequest } from "@/lib/server/app-check";
+import { consumeRateLimit } from "@/lib/server/rate-limit";
 import {
   getExpiredSessionCookieOptions,
   getSessionCookieOptions,
@@ -11,10 +12,14 @@ import {
   SESSION_LIFETIME_SECONDS,
 } from "@/lib/server/session-cookie";
 
-function sessionResponse(body: object, status = 200) {
+function sessionResponse(
+  body: object,
+  status = 200,
+  headers: Record<string, string> = {},
+) {
   return NextResponse.json(body, {
     status,
-    headers: { "Cache-Control": "no-store" },
+    headers: { "Cache-Control": "no-store", ...headers },
   });
 }
 
@@ -87,6 +92,20 @@ export async function POST(request: NextRequest) {
     }
     if (!hasRecentAuthentication(decodedToken)) {
       return sessionResponse({ error: "A recent sign-in is required." }, 401);
+    }
+
+    const rateLimit = await consumeRateLimit({
+      scope: "session-create",
+      subject: decodedToken.uid,
+      limit: 10,
+      windowSeconds: 10 * 60,
+    });
+    if (!rateLimit.allowed) {
+      return sessionResponse(
+        { error: "Too many session requests. Try again later." },
+        429,
+        { "Retry-After": String(rateLimit.retryAfterSeconds) },
+      );
     }
 
     const sessionCookie = await auth.createSessionCookie(body.idToken, {

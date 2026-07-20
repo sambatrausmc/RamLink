@@ -49,6 +49,7 @@ const adminMocks = vi.hoisted(() => {
 });
 
 const appCheckMocks = vi.hoisted(() => ({ verify: vi.fn() }));
+const rateLimitMocks = vi.hoisted(() => ({ consume: vi.fn() }));
 
 vi.mock("@/lib/firebase/admin", () => ({
   getAdminAuth: () => adminMocks.auth,
@@ -57,6 +58,10 @@ vi.mock("@/lib/firebase/admin", () => ({
 
 vi.mock("@/lib/server/app-check", () => ({
   verifyAppCheckRequest: appCheckMocks.verify,
+}));
+
+vi.mock("@/lib/server/rate-limit", () => ({
+  consumeRateLimit: rateLimitMocks.consume,
 }));
 
 import { DELETE } from "@/app/api/account/route";
@@ -76,6 +81,7 @@ describe("account deletion API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     appCheckMocks.verify.mockResolvedValue(true);
+    rateLimitMocks.consume.mockResolvedValue({ allowed: true });
     adminMocks.batchCommits.length = 0;
     adminMocks.batchDeletes.length = 0;
     adminMocks.state.batchFailureAt = -1;
@@ -144,6 +150,19 @@ describe("account deletion API", () => {
     });
     const response = await DELETE(deletionRequest("stale-token"));
     expect(response.status).toBe(409);
+  });
+
+  it("returns retry guidance after too many deletion requests", async () => {
+    rateLimitMocks.consume.mockResolvedValue({
+      allowed: false,
+      retryAfterSeconds: 120,
+    });
+
+    const response = await DELETE(deletionRequest("fresh-token"));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("120");
+    expect(adminMocks.auth.deleteUser).not.toHaveBeenCalled();
   });
 
   it("reconciles membership and RSVP counters before deleting Auth", async () => {

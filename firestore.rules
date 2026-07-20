@@ -404,6 +404,10 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    match /rateLimits/{rateLimitId} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
