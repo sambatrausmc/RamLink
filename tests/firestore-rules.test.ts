@@ -52,14 +52,23 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     await testEnvironment.clearFirestore();
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       const database = context.firestore();
+      const seededAt = new Date("2026-07-01T12:00:00Z");
 
       await setDoc(doc(database, "users/student-1"), {
+        id: "student-1",
         role: "student",
         displayName: "Student One",
+        email: "student-1@farmingdale.edu",
+        major: "Computer Programming",
+        classYear: "Senior",
+        interests: ["Technology"],
         joinedClubIds: [],
         savedClubIds: [],
         savedEventIds: [],
         rsvpedEventIds: [],
+        managedClubIds: [],
+        createdAt: seededAt,
+        updatedAt: seededAt,
       });
 
       await setDoc(doc(database, "users/officer-1"), {
@@ -113,8 +122,13 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
 
       await setDoc(doc(database, "inquiries/inquiry-1"), {
         clubId: "club-1",
+        clubName: "Campus Club",
         studentId: "student-1",
+        studentName: "Student One",
+        subject: "Membership question",
+        message: "When does the club meet?",
         status: "open",
+        createdAt: seededAt,
         replies: [],
       });
 
@@ -122,41 +136,82 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
         userId: "student-1",
         title: "Request update",
         body: "Your request has been reviewed.",
-        type: "join_request",
+        type: "joinRequest",
         status: "unread",
+        relatedHref: "/dashboard",
+        createdAt: seededAt,
       });
 
       await setDoc(doc(database, "events/event-1"), {
         clubId: "club-1",
+        clubName: "Campus Club",
         title: "Campus Event",
+        description: "A campus event for club members.",
+        date: "2026-08-18",
+        startTime: "5:30 PM",
+        endTime: "7:00 PM",
+        location: "Campus Center",
         rsvpCount: 0,
+        updatedAt: seededAt,
       });
 
       await setDoc(doc(database, "events/event-2"), {
         clubId: "club-1",
+        clubName: "Campus Club",
         title: "Second Campus Event",
+        description: "Another campus event for club members.",
+        date: "2026-08-25",
+        startTime: "5:30 PM",
+        endTime: "7:00 PM",
+        location: "Campus Center",
         rsvpCount: 0,
+        updatedAt: seededAt,
       });
 
       await setDoc(doc(database, "clubs/club-1"), {
         name: "Campus Club",
+        shortName: "CC",
+        category: "Technology",
         description: "A student organization.",
+        meetingSchedule: "Tuesdays at 5:30 PM",
+        meetingLocation: "Campus Center",
+        contactEmail: "club@farmingdale.edu",
+        tags: ["Technology"],
         status: "active",
         memberCount: 1,
+        updatedAt: seededAt,
+      });
+
+      await setDoc(doc(database, "clubs/club-2"), {
+        name: "Second Campus Club",
+        shortName: "SCC",
+        category: "Leadership",
+        description: "A second student organization.",
+        meetingSchedule: "Wednesdays at 4:00 PM",
+        meetingLocation: "Campus Center",
+        contactEmail: "second-club@farmingdale.edu",
+        tags: ["Leadership"],
+        status: "active",
+        memberCount: 0,
+        updatedAt: seededAt,
       });
 
       await setDoc(doc(database, "announcements/announcement-1"), {
         clubId: "club-1",
+        clubName: "Campus Club",
         title: "Meeting reminder",
         body: "Meet in the student center.",
+        priority: "normal",
+        updatedAt: seededAt,
       });
 
       await setDoc(doc(database, "resources/resource-1"), {
         clubId: "club-1",
         title: "Club handbook",
         description: "Officer reference material.",
-        type: "link",
+        type: "Link",
         url: "https://example.com/handbook",
+        updatedAt: seededAt,
       });
     });
   });
@@ -179,6 +234,20 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     await assertFails(
       updateDoc(studentRef, {
         joinedClubIds: ["club-1"],
+        updatedAt: serverTimestamp(),
+      }),
+    );
+
+    await assertFails(
+      updateDoc(studentRef, {
+        displayName: "",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+
+    await assertFails(
+      updateDoc(studentRef, {
+        interests: Array.from({ length: 21 }, (_, index) => `Interest ${index}`),
         updatedAt: serverTimestamp(),
       }),
     );
@@ -314,7 +383,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     expect(eventSnapshot.data()?.rsvpCount).toBe(0);
   });
 
-  it("allows a student to cancel only their own pending request", async () => {
+  it("reserves join request cancellation for the protected API", async () => {
     const studentDb = verifiedContext("student-1").firestore();
     const unrelatedDb = verifiedContext("unrelated-1").firestore();
 
@@ -322,12 +391,12 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
       deleteDoc(doc(unrelatedDb, "joinRequests/request-1")),
     );
 
-    await assertSucceeds(
+    await assertFails(
       deleteDoc(doc(studentDb, "joinRequests/request-1")),
     );
   });
 
-  it("requires deterministic IDs for new join requests", async () => {
+  it("reserves join request creation for the protected API", async () => {
     const studentDb = verifiedContext("student-1").firestore();
     const requestData = {
       clubId: "club-2",
@@ -345,15 +414,21 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
 
     const requestRef = doc(studentDb, "joinRequests/student-1_club-2");
-    await assertSucceeds(setDoc(requestRef, requestData));
     await assertFails(setDoc(requestRef, requestData));
+    await assertFails(
+      setDoc(doc(studentDb, "joinRequests/student-1_club-1"), {
+        ...requestData,
+        clubId: "club-1",
+        message: "x".repeat(1001),
+      }),
+    );
   });
 
-  it("allows rejected requests to reopen without bypassing approval", async () => {
+  it("reserves rejected request reopening for the protected API", async () => {
     const studentDb = verifiedContext("student-1").firestore();
     const requestRef = doc(studentDb, "joinRequests/student-1_club-1");
 
-    await assertSucceeds(
+    await assertFails(
       updateDoc(requestRef, {
         message: "I am submitting an updated request.",
         status: "pending",
@@ -370,14 +445,6 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
       }),
     );
 
-    await assertFails(
-      updateDoc(requestRef, {
-        message: "Reset approved request.",
-        status: "pending",
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }),
-    );
   });
 
   it("allows rejection but blocks standalone membership approval", async () => {
@@ -499,6 +566,49 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
   });
 
+  it("validates student inquiry and notification payloads", async () => {
+    const studentDb = verifiedContext("student-1").firestore();
+
+    await assertFails(
+      setDoc(doc(studentDb, "inquiries/student-inquiry"), {
+        clubId: "club-1",
+        clubName: "Campus Club",
+        studentId: "student-1",
+        studentName: "Student One",
+        subject: "Meeting question",
+        message: "May I attend the next meeting?",
+        status: "open",
+        createdAt: serverTimestamp(),
+        replies: [],
+      }),
+    );
+    await assertFails(
+      setDoc(doc(studentDb, "inquiries/forged-inquiry"), {
+        clubId: "club-1",
+        clubName: "Campus Club",
+        studentId: "student-1",
+        studentName: "Student One",
+        subject: "Meeting question",
+        message: "May I attend the next meeting?",
+        status: "resolved",
+        createdAt: serverTimestamp(),
+        replies: [],
+        internalNote: "Unexpected field",
+      }),
+    );
+    await assertFails(
+      setDoc(doc(studentDb, "notifications/invalid-notification"), {
+        userId: "student-1",
+        title: "Invalid notification",
+        body: "This payload uses an unsupported type.",
+        type: "system",
+        status: "unread",
+        relatedHref: "/dashboard",
+        createdAt: serverTimestamp(),
+      }),
+    );
+  });
+
   it("limits notification updates to the owner and valid statuses", async () => {
     const studentDb = verifiedContext("student-1").firestore();
     const notificationRef = doc(
@@ -560,6 +670,34 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
   });
 
+  it("rejects malformed club content and protected counter changes", async () => {
+    const officerDb = verifiedContext("officer-1").firestore();
+    const eventRef = doc(officerDb, "events/event-1");
+
+    await assertFails(
+      updateDoc(eventRef, {
+        rsvpCount: 500,
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      updateDoc(eventRef, {
+        internalNote: "This field is not part of the event schema.",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      setDoc(doc(officerDb, "resources/invalid-resource"), {
+        clubId: "club-1",
+        title: "Invalid resource",
+        description: "Invalid type value.",
+        type: "Executable",
+        url: "https://example.com/resource",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+  });
+
   it("allows an officer audit and managed announcement deletion together", async () => {
     const officerDb = verifiedContext("officer-1").firestore();
     const batch = writeBatch(officerDb);
@@ -599,7 +737,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
   });
 
-  it("accepts only authenticated reports owned by the reporter", async () => {
+  it("reserves report submission for the protected API", async () => {
     const studentDb = verifiedContext("student-1").firestore();
     const anonymousDb = testEnvironment.unauthenticatedContext().firestore();
     const validReport = {
@@ -613,7 +751,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
       updatedAt: serverTimestamp(),
     };
 
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(studentDb, "reports/report-1"), validReport),
     );
     await assertFails(

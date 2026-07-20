@@ -10,6 +10,10 @@ import {
 } from "firebase/auth";
 import { requireFarmingdaleEmail } from "@/lib/auth-email-policy";
 import {
+  requireAuthEmailCooldown,
+  startAuthEmailCooldown,
+} from "@/lib/auth-action-cooldown";
+import {
   clearServerSession,
   createServerSession,
 } from "@/lib/firebase/server-session";
@@ -22,6 +26,7 @@ export type LoginInput = {
   email: string;
   password: string;
 };
+export const MINIMUM_PASSWORD_LENGTH = 12;
 async function getAuthClient() {
   const { auth, ensureAuthPersistence } = await import("@/lib/firebase/client");
   await ensureAuthPersistence();
@@ -38,6 +43,9 @@ function getVerificationActionSettings() {
 export async function registerStudentAccount(input: RegisterStudentInput) {
   const email = requireFarmingdaleEmail(input.email);
   const displayName = input.displayName.trim();
+  if (input.password.length < MINIMUM_PASSWORD_LENGTH) {
+    throw new Error(`Password must be at least ${MINIMUM_PASSWORD_LENGTH} characters.`);
+  }
   const auth = await getAuthClient();
   const credential = await createUserWithEmailAndPassword(
     auth,
@@ -51,10 +59,12 @@ export async function registerStudentAccount(input: RegisterStudentInput) {
     credential.user,
     getVerificationActionSettings(),
   );
+  startAuthEmailCooldown("verification");
   return credential.user;
 }
 
 export async function resendCurrentUserVerification() {
+  requireAuthEmailCooldown("verification");
   const auth = await getAuthClient();
   if (!auth.currentUser?.email) {
     throw new Error("Sign in before requesting another verification email.");
@@ -64,6 +74,7 @@ export async function resendCurrentUserVerification() {
     auth.currentUser,
     getVerificationActionSettings(),
   );
+  startAuthEmailCooldown("verification");
 }
 
 export async function reloadCurrentUser() {
@@ -97,6 +108,8 @@ export async function logoutCurrentUser() {
   await signOut(auth);
 }
 export async function resetPasswordForEmail(email: string) {
+  requireAuthEmailCooldown("password-reset");
   const auth = await getAuthClient();
   await sendPasswordResetEmail(auth, requireFarmingdaleEmail(email));
+  startAuthEmailCooldown("password-reset");
 }

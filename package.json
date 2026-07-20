@@ -50,5 +50,11 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
+  },
+  "overrides": {
+    "gaxios": "7.2.0",
+    "postcss": "$postcss",
+    "retry-request": "8.0.3",
+    "teeny-request": "10.1.3"
   }
 }

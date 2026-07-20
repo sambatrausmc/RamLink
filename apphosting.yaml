@@ -4,3 +4,11 @@ runConfig:
   minInstances: 0
   maxInstances: 10
   concurrency: 80
+
+# The public reCAPTCHA Enterprise site key must be configured as a BUILD
+# environment variable in App Hosting before the first production rollout.
+env:
+  - variable: FIREBASE_APP_CHECK_ENFORCED
+    value: "true"
+    availability:
+      - RUNTIME

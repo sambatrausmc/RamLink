@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { startAuthEmailCooldown } from "@/lib/auth-action-cooldown";
 
 const mocks = vi.hoisted(() => ({
   authState: {
@@ -43,6 +44,7 @@ describe("student email verification screen", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     mocks.authState.loading = false;
     mocks.authState.profile = null;
     mocks.authState.user = {
@@ -54,7 +56,9 @@ describe("student email verification screen", () => {
     mocks.authState.refreshSession.mockResolvedValue(true);
     mocks.logout.mockResolvedValue(undefined);
     mocks.reload.mockResolvedValue(mocks.authState.user);
-    mocks.resend.mockResolvedValue(undefined);
+    mocks.resend.mockImplementation(async () => {
+      startAuthEmailCooldown("verification");
+    });
   });
 
   it("shows the active unverified account", () => {
@@ -72,6 +76,7 @@ describe("student email verification screen", () => {
 
     await waitFor(() => expect(mocks.resend).toHaveBeenCalledOnce());
     expect(screen.getByText("A new verification email was sent.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Try again in 60s/ })).toBeTruthy();
   });
 
   it("shows a useful message when resend fails", async () => {

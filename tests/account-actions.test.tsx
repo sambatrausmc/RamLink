@@ -8,6 +8,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { startAuthEmailCooldown } from "@/lib/auth-action-cooldown";
 
 const mocks = vi.hoisted(() => ({
   loginWithEmailAndPassword: vi.fn(),
@@ -41,8 +42,11 @@ describe("account actions", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     mocks.logoutCurrentUser.mockResolvedValue(undefined);
-    mocks.resetPasswordForEmail.mockResolvedValue(undefined);
+    mocks.resetPasswordForEmail.mockImplementation(async () => {
+      startAuthEmailCooldown("password-reset");
+    });
   });
 
   it("links login users to the dedicated password reset page", () => {
@@ -71,6 +75,7 @@ describe("account actions", () => {
     expect(
       screen.getByText("Check your email for a password reset link."),
     ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Try again in 60s/ })).toBeTruthy();
   });
 
   it("shows reset failure feedback", async () => {

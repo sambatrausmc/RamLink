@@ -11,14 +11,24 @@ describe("workflow and admin integration", () => {
     expect(rules).toContain("managesClub(request.resource.data.clubId)");
   });
 
-  // Verifies feedback notification titles exist in student action flows
-  it("creates workflow notifications for student actions", () => {
+  // Verifies student writes use protected APIs that own their notifications.
+  it("creates workflow notifications from protected student APIs", () => {
     const actions = fs.readFileSync(
       path.resolve("lib/firebase/student-actions.ts"),
       "utf8",
     );
-    expect(actions).toContain('title: "Join request sent"');
-    expect(actions).toContain('title: "Question sent"');
+    const joinApi = fs.readFileSync(
+      path.resolve("app/api/student/join-requests/route.ts"),
+      "utf8",
+    );
+    const inquiryApi = fs.readFileSync(
+      path.resolve("app/api/student/inquiries/route.ts"),
+      "utf8",
+    );
+    expect(actions).toContain('"/api/student/join-requests"');
+    expect(actions).toContain('"/api/student/inquiries"');
+    expect(joinApi).toContain('title: "Join request sent"');
+    expect(inquiryApi).toContain('title: "Question sent"');
   });
 
   // Ensures mock imports have been removed from migrated admin routes

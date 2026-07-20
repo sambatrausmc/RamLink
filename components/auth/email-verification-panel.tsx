@@ -7,6 +7,7 @@ import { LogOut, MailCheck, RefreshCcw, Send } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuthEmailCooldown } from "@/components/auth/use-auth-email-cooldown";
 import { getWorkspaceHref } from "@/lib/auth-navigation";
 import {
   logoutCurrentUser,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/firebase/auth";
 
 export function EmailVerificationPanel() {
+  const cooldown = useAuthEmailCooldown("verification");
   const router = useRouter();
   const { loading, profile, refreshProfile, refreshSession, user } = useAuth();
   const [verified, setVerified] = useState(Boolean(user?.emailVerified));
@@ -34,6 +36,7 @@ export function EmailVerificationPanel() {
     setFeedback("");
     try {
       await resendCurrentUserVerification();
+      cooldown.refresh();
       setFeedback("A new verification email was sent.");
     } catch {
       setFeedback("Unable to resend the verification email. Please try again.");
@@ -105,7 +108,7 @@ export function EmailVerificationPanel() {
         <Button
           type="button"
           onClick={refreshVerification}
-          disabled={busyAction !== null}
+          disabled={busyAction !== null || cooldown.remaining > 0}
         >
           <RefreshCcw className="h-4 w-4" />
           {busyAction === "refresh" ? "Checking..." : "I verified my email"}
@@ -117,7 +120,11 @@ export function EmailVerificationPanel() {
           disabled={busyAction !== null}
         >
           <Send className="h-4 w-4" />
-          {busyAction === "resend" ? "Sending..." : "Resend email"}
+          {busyAction === "resend"
+            ? "Sending..."
+            : cooldown.remaining > 0
+              ? `Try again in ${cooldown.remaining}s`
+              : "Resend email"}
         </Button>
       </div>
       <button

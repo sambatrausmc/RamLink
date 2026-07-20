@@ -35,4 +35,15 @@ describe("release automation", () => {
     expect(dependabot).toContain("package-ecosystem: npm");
     expect(dependabot).toContain("interval: weekly");
   });
+
+  it("enforces App Check and avoids hosted private-key configuration", () => {
+    const hosting = readConfig("apphosting.yaml");
+    const environmentExample = readConfig(".env.local.example");
+
+    expect(hosting).toContain("FIREBASE_APP_CHECK_ENFORCED");
+    expect(hosting).toContain('value: "true"');
+    expect(environmentExample).toContain("GOOGLE_APPLICATION_CREDENTIALS");
+    expect(environmentExample).not.toContain("FIREBASE_PRIVATE_KEY=");
+    expect(environmentExample).not.toContain("FIREBASE_CLIENT_EMAIL=");
+  });
 });

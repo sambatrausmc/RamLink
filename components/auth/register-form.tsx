@@ -4,7 +4,10 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { registerStudentAccount } from "@/lib/firebase/auth";
+import {
+  MINIMUM_PASSWORD_LENGTH,
+  registerStudentAccount,
+} from "@/lib/firebase/auth";
 import { getWorkspaceHref } from "@/lib/auth-navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,13 +78,12 @@ export function RegisterForm() {
       </label>
       <label className="block">
         <span className="text-sm font-semibold text-brand-ink">Password</span>
-        {/* Enforce a minimum length because Firebase Auth requires at least 6 characters */}
         <Input
           className="mt-2"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           type="password"
-          minLength={6}
+          minLength={MINIMUM_PASSWORD_LENGTH}
           required
         />
       </label>
