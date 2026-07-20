@@ -37,6 +37,7 @@ export async function updateUserRole(userId: string, role: UserRole) {
   });
   batch.update(doc(db, COLLECTIONS.users, userId), {
     role,
+    ...(role === "clubOfficer" ? {} : { managedClubIds: [] }),
     updatedAt: serverTimestamp(),
   });
   await batch.commit();
