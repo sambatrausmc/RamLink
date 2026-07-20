@@ -92,19 +92,29 @@ export async function POST(request: Request) {
     );
   }
 
+  let decodedToken;
   try {
-    const decodedToken = await getAdminAuth().verifyIdToken(
+    decodedToken = await getAdminAuth().verifyIdToken(
       authorization.slice("Bearer ".length),
       true,
     );
-    if (!hasVerifiedFarmingdaleClaims(decodedToken)) {
-      return announcementResponse(
-        requestId,
-        { error: "A verified Farmingdale account is required." },
-        403,
-      );
-    }
+  } catch {
+    return announcementResponse(
+      requestId,
+      { error: "Invalid authentication token." },
+      401,
+    );
+  }
 
+  if (!hasVerifiedFarmingdaleClaims(decodedToken)) {
+    return announcementResponse(
+      requestId,
+      { error: "A verified Farmingdale account is required." },
+      403,
+    );
+  }
+
+  try {
     const rateLimit = await consumeRateLimit({
       scope: "announcement-create",
       subject: decodedToken.uid,
