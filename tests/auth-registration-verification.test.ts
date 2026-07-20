@@ -73,7 +73,7 @@ describe("verified student registration", () => {
     expect(mocks.sendVerification).toHaveBeenCalledWith(
       mocks.user,
       expect.objectContaining({
-        url: "http://localhost:3000/verify-email",
+        url: "http://localhost:3000/verification-complete",
         handleCodeInApp: false,
       }),
     );

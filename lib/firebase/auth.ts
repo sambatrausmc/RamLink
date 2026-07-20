@@ -35,7 +35,7 @@ async function getAuthClient() {
 
 function getVerificationActionSettings() {
   return {
-    url: new URL("/verify-email", window.location.origin).toString(),
+    url: new URL("/verification-complete", window.location.origin).toString(),
     handleCodeInApp: false,
   };
 }
