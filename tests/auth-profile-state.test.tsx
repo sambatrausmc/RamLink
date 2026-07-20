@@ -67,7 +67,13 @@ const studentProfile = {
 };
 
 function AuthStateProbe() {
-  const { profile, profileStatus, refreshProfile, sessionState } = useAuth();
+  const {
+    profile,
+    profileStatus,
+    refreshProfile,
+    refreshSession,
+    sessionState,
+  } = useAuth();
   return (
     <div>
       <span data-testid="profile-status">{profileStatus}</span>
@@ -76,6 +82,9 @@ function AuthStateProbe() {
       <span data-testid="session-status">{sessionState}</span>
       <button type="button" onClick={() => void refreshProfile()}>
         Retry profile
+      </button>
+      <button type="button" onClick={() => void refreshSession()}>
+        Retry session
       </button>
     </div>
   );
@@ -190,6 +199,33 @@ describe("authenticated profile states", () => {
     });
 
     expect(mocks.createServerSession).toHaveBeenCalledWith(verifiedUser);
+    expect(screen.getByTestId("session-status").textContent).toBe("ready");
+  });
+
+  it("shares one server session exchange across concurrent callers", async () => {
+    let finishSession: () => void = () => {};
+    mocks.readServerSession.mockResolvedValueOnce(null);
+    mocks.createServerSession.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishSession = resolve;
+      }),
+    );
+    await renderProvider();
+
+    let authChange: Promise<void> | undefined;
+    act(() => {
+      authChange = mocks.authCallback?.(verifiedUser);
+    });
+    await waitFor(() => {
+      expect(mocks.createServerSession).toHaveBeenCalledOnce();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry session" }));
+    expect(mocks.readServerSession).toHaveBeenCalledOnce();
+    expect(mocks.createServerSession).toHaveBeenCalledOnce();
+
+    finishSession();
+    await act(async () => authChange);
     expect(screen.getByTestId("session-status").textContent).toBe("ready");
   });
 
