@@ -2,6 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { StudentProfile } from "@/lib/types";
 
 const mocks = vi.hoisted(() => ({
   auth: { currentUser: null as Record<string, unknown> | null },
@@ -11,6 +12,10 @@ const mocks = vi.hoisted(() => ({
   createServerSession: vi.fn(),
   getProfile: vi.fn(),
   readServerSession: vi.fn(),
+  profileCallback: null as ((profile: StudentProfile | null) => void) | null,
+  profileErrorCallback: null as (() => void) | null,
+  profileUnsubscribe: vi.fn(),
+  subscribeProfile: vi.fn(),
   unsubscribe: vi.fn(),
 }));
 
@@ -34,6 +39,7 @@ vi.mock("firebase/auth", () => ({
 vi.mock("@/lib/firebase/user-profile", () => ({
   ensureStudentProfile: mocks.ensureProfile,
   getStudentProfile: mocks.getProfile,
+  subscribeToStudentProfile: mocks.subscribeProfile,
 }));
 
 import { AuthProvider, useAuth } from "@/components/auth/auth-provider";
@@ -66,6 +72,7 @@ function AuthStateProbe() {
     <div>
       <span data-testid="profile-status">{profileStatus}</span>
       <span data-testid="profile-name">{profile?.displayName ?? "none"}</span>
+      <span data-testid="profile-role">{profile?.role ?? "none"}</span>
       <span data-testid="session-status">{sessionState}</span>
       <button type="button" onClick={() => void refreshProfile()}>
         Retry profile
@@ -81,6 +88,8 @@ describe("authenticated profile states", () => {
     vi.clearAllMocks();
     mocks.auth.currentUser = verifiedUser;
     mocks.authCallback = null;
+    mocks.profileCallback = null;
+    mocks.profileErrorCallback = null;
     mocks.ensurePersistence.mockResolvedValue(undefined);
     mocks.getProfile.mockResolvedValue(studentProfile);
     mocks.ensureProfile.mockResolvedValue(studentProfile);
@@ -89,6 +98,13 @@ describe("authenticated profile states", () => {
       authenticated: true,
       uid: verifiedUser.uid,
     });
+    mocks.subscribeProfile.mockImplementation(
+      async (_uid, onProfile, onError) => {
+        mocks.profileCallback = onProfile;
+        mocks.profileErrorCallback = onError;
+        return mocks.profileUnsubscribe;
+      },
+    );
   });
 
   async function renderProvider() {
@@ -189,5 +205,24 @@ describe("authenticated profile states", () => {
     expect(screen.getByTestId("session-status").textContent).toBe("error");
     expect(screen.getByTestId("profile-status").textContent).toBe("missing");
     expect(mocks.getProfile).not.toHaveBeenCalled();
+  });
+
+  it("updates role and managed clubs when the Firestore profile changes", async () => {
+    await renderProvider();
+    await act(async () => {
+      await mocks.authCallback?.(verifiedUser);
+    });
+    await waitFor(() => expect(mocks.subscribeProfile).toHaveBeenCalled());
+
+    act(() => {
+      mocks.profileCallback?.({
+        ...studentProfile,
+        role: "clubOfficer",
+        managedClubIds: ["club-1"],
+      });
+    });
+
+    expect(screen.getByTestId("profile-role").textContent).toBe("clubOfficer");
+    expect(screen.getByTestId("profile-status").textContent).toBe("ready");
   });
 });
