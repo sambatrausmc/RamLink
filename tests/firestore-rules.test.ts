@@ -500,6 +500,24 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
   });
 
+  it("allows an officer audit and managed announcement deletion together", async () => {
+    const officerDb = verifiedContext("officer-1").firestore();
+    const batch = writeBatch(officerDb);
+
+    batch.set(doc(officerDb, "auditLogs/officer-announcement-delete"), {
+      actorId: "officer-1",
+      actorRole: "clubOfficer",
+      action: "officer.announcement_deleted",
+      targetType: "announcement",
+      targetId: "announcement-1",
+      clubId: "club-1",
+      createdAt: serverTimestamp(),
+    });
+    batch.delete(doc(officerDb, "announcements/announcement-1"));
+
+    await assertSucceeds(batch.commit());
+  });
+
   it("reserves club lifecycle changes for administrators", async () => {
     const officerDb = verifiedContext("officer-1").firestore();
     const adminDb = verifiedContext("admin-1").firestore();

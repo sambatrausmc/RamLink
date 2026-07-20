@@ -144,6 +144,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [loadProfile, synchronizeSession]);
 
+  useEffect(() => {
+    let active = true;
+    let unsubscribe = () => {};
+
+    if (!user?.emailVerified) {
+      return () => {
+        active = false;
+      };
+    }
+
+    import("@/lib/firebase/user-profile")
+      .then(({ subscribeToStudentProfile }) =>
+        subscribeToStudentProfile(
+          user.uid,
+          (nextProfile) => {
+            if (!active) return;
+            setProfile(nextProfile);
+            setProfileStatus(nextProfile ? "ready" : "missing");
+          },
+          () => {
+            if (active) setProfileStatus("error");
+          },
+        ),
+      )
+      .then((stopListening) => {
+        if (active) {
+          unsubscribe = stopListening;
+        } else {
+          stopListening();
+        }
+      })
+      .catch(() => {
+        if (active) setProfileStatus("error");
+      });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [user]);
+
   const refreshProfile = useCallback(async () => {
     const { auth } = await import("@/lib/firebase/client");
     await loadProfile(auth.currentUser);

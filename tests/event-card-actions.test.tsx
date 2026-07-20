@@ -66,6 +66,6 @@ describe("student event and club cards", () => {
     expect(await screen.findByText("RSVP saved.")).toBeTruthy();
     expect(screen.getByText(`${event.rsvpCount + 1} RSVPs`)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Cancel RSVP" })).toBeTruthy();
-    expect(mocks.refreshProfile).toHaveBeenCalledOnce();
+    expect(mocks.refreshProfile).not.toHaveBeenCalled();
   });
 });

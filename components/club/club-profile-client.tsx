@@ -55,8 +55,18 @@ export function ClubProfileClient() {
           .map((tag) => tag.trim())
           .filter(Boolean),
       });
-      setClub(await getClubByIdFromFirestore(clubId));
-      setFeedback("Club profile saved to Firestore.");
+      try {
+        const nextClub = await getClubByIdFromFirestore(clubId);
+        if (!nextClub) {
+          throw new Error("Club profile was not found after saving.");
+        }
+        setClub(nextClub);
+        setFeedback("Club profile saved to Firestore.");
+      } catch {
+        setFeedback(
+          "Club profile saved to Firestore. Reload the page to refresh it.",
+        );
+      }
     } catch {
       setFeedback("Unable to save the club profile.");
     } finally {

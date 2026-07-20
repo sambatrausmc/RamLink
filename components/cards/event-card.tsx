@@ -18,7 +18,7 @@ type EventCardProps = {
 };
 
 export function EventCard({ event, compact = false, actionMode = "workspace" }: EventCardProps) {
-  const { profile, refreshProfile, user } = useAuth();
+  const { profile, user } = useAuth();
   
   const [savedOverride, setSavedOverride] = useState<boolean | null>(null);
   const [rsvpOverride, setRsvpOverride] = useState<boolean | null>(null);
@@ -46,7 +46,6 @@ export function EventCard({ event, compact = false, actionMode = "workspace" }: 
       const nextSaved = await toggleSavedEvent(user.uid, event.id, isSaved);
       setSavedOverride(nextSaved);
       setFeedback(nextSaved ? "Event saved." : "Event removed from saved items.");
-      await refreshProfile();
     } catch {
       setFeedback("Unable to update saved event right now.");
     } finally {
@@ -66,7 +65,6 @@ export function EventCard({ event, compact = false, actionMode = "workspace" }: 
       setRsvpOverride(nextRsvp);
       setRsvpCountAdjustment((current) => current + (nextRsvp ? 1 : -1));
       setFeedback(nextRsvp ? "RSVP saved." : "RSVP removed.");
-      await refreshProfile();
     } catch {
       setFeedback("Unable to update RSVP right now.");
     } finally {

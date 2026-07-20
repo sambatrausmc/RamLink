@@ -1,5 +1,4 @@
 import {
-  addDoc,
   arrayRemove,
   arrayUnion,
   collection,
@@ -10,6 +9,7 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
@@ -338,12 +338,12 @@ export async function createClubInquiry(
     replies: [],
   };
 
-  const documentReference = await addDoc(
-    collection(db, COLLECTIONS.inquiries),
-    inquiry,
-  );
+  const inquiryReference = doc(collection(db, COLLECTIONS.inquiries));
+  const notificationReference = doc(collection(db, COLLECTIONS.notifications));
+  const batch = writeBatch(db);
 
-  await addDoc(collection(db, COLLECTIONS.notifications), {
+  batch.set(inquiryReference, inquiry);
+  batch.set(notificationReference, {
     userId: input.userId,
     clubId: input.clubId,
     title: "Question sent",
@@ -353,9 +353,10 @@ export async function createClubInquiry(
     relatedHref: "/notifications",
     createdAt: serverTimestamp(),
   });
+  await batch.commit();
 
   return {
-    id: documentReference.id,
+    id: inquiryReference.id,
     clubId: inquiry.clubId,
     studentId: inquiry.studentId,
     subject: inquiry.subject,

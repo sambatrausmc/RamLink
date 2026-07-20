@@ -27,9 +27,7 @@ export function AdminUserList({ users, clubs }: AdminUserListProps) {
     setFeedback("");
     try {
       await updateUserRole(userId, role);
-      // Automatically clear managed club assignments if demoting away from club officer
       if (role !== "clubOfficer") {
-        await updateManagedClubs(userId, []);
         setManagedClubs((current) => new Map(current).set(userId, ""));
       }
       setRoles((current) => new Map(current).set(userId, role));

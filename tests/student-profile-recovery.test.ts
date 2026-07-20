@@ -4,17 +4,19 @@ const mocks = vi.hoisted(() => ({
   db: { name: "ramlink-db" },
   doc: vi.fn(() => ({ path: "users/student-1" })),
   get: vi.fn(),
+  getDoc: vi.fn(),
   runTransaction: vi.fn(),
   serverTimestamp: vi.fn(() => "server-time"),
   set: vi.fn(),
+  updateDoc: vi.fn(),
 }));
 
 vi.mock("firebase/firestore", () => ({
   doc: mocks.doc,
-  getDoc: vi.fn(),
+  getDoc: mocks.getDoc,
   runTransaction: mocks.runTransaction,
   serverTimestamp: mocks.serverTimestamp,
-  updateDoc: vi.fn(),
+  updateDoc: mocks.updateDoc,
 }));
 
 vi.mock("@/lib/firebase/client", () => ({ db: mocks.db }));
@@ -116,5 +118,22 @@ describe("student profile recovery", () => {
     await expect(ensureStudentProfile(verifiedUser)).rejects.toThrow(
       "Firestore unavailable",
     );
+  });
+
+  it("finishes profile saves without requiring a second Firestore read", async () => {
+    mocks.updateDoc.mockResolvedValueOnce(undefined);
+    const { updateStudentProfile } = await import("@/lib/firebase/user-profile");
+
+    await expect(
+      updateStudentProfile("student-1", {
+        displayName: "Updated Student",
+        major: "Computer Programming",
+        classYear: "Senior",
+        interests: ["Technology"],
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(mocks.updateDoc).toHaveBeenCalledOnce();
+    expect(mocks.getDoc).not.toHaveBeenCalled();
   });
 });

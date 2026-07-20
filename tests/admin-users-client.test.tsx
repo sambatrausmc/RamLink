@@ -1,8 +1,9 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AdminUsersClient } from "@/components/admin/admin-users-client";
+import { updateManagedClubs, updateUserRole } from "@/lib/firebase/admin-workflows";
 import { getClubs, getStudents } from "@/lib/firebase/public-data";
 import { clubs, currentStudent } from "@/lib/mock-data";
 
@@ -50,5 +51,18 @@ describe("admin user directory", () => {
     expect(await screen.findByDisplayValue("Admin")).toBeTruthy();
     expect(screen.getByDisplayValue("Club Officer")).toBeTruthy();
     expect(screen.getByDisplayValue(clubs[0].name)).toBeTruthy();
+  });
+
+  it("uses one role workflow when removing officer access", async () => {
+    render(<AdminUsersClient />);
+    const officerRole = await screen.findByDisplayValue("Club Officer");
+
+    fireEvent.change(officerRole, { target: { value: "student" } });
+
+    await waitFor(() => {
+      expect(updateUserRole).toHaveBeenCalledWith("officer-user", "student");
+    });
+    expect(updateManagedClubs).not.toHaveBeenCalled();
+    expect(screen.getByText("User role updated.")).toBeTruthy();
   });
 });

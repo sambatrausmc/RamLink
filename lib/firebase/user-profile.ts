@@ -1,6 +1,7 @@
 import {
   doc,
   getDoc,
+  onSnapshot,
   runTransaction,
   serverTimestamp,
   updateDoc,
@@ -123,6 +124,25 @@ export async function getStudentProfile(uid: string) {
   return normalizeStudentProfile(snapshot.id, snapshot.data());
 }
 
+export async function subscribeToStudentProfile(
+  uid: string,
+  onProfile: (profile: StudentProfile | null) => void,
+  onError: () => void,
+) {
+  const db = await getDb();
+  return onSnapshot(
+    doc(db, COLLECTIONS.users, uid),
+    (snapshot) => {
+      onProfile(
+        snapshot.exists()
+          ? normalizeStudentProfile(snapshot.id, snapshot.data())
+          : null,
+      );
+    },
+    onError,
+  );
+}
+
 export async function updateStudentProfile(
   uid: string,
   input: UpdateStudentProfileInput,
@@ -132,9 +152,4 @@ export async function updateStudentProfile(
     ...input,
     updatedAt: serverTimestamp(),
   });
-  const updatedProfile = await getStudentProfile(uid);
-  if (!updatedProfile) {
-    throw new Error("Student profile was not found after update.");
-  }
-  return updatedProfile;
 }

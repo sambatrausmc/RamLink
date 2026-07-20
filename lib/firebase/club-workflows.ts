@@ -4,18 +4,17 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs,
   increment,
-  query,
   runTransaction,
   serverTimestamp,
-  where,
 } from "firebase/firestore";
+import { getIdToken } from "firebase/auth";
 import {
   createAuditedBatch,
   prepareClientAuditLog,
 } from "@/lib/firebase/audit-logs";
 import { COLLECTIONS } from "@/lib/firebase/collections";
+import { getAppCheckRequestHeaders } from "@/lib/firebase/app-check";
 import type {
   Club,
   ClubInquiry,
@@ -166,43 +165,41 @@ export async function deleteClubEvent(eventId: string, clubId: string) {
   await batch.commit();
 }
 
-// Posts a new announcement and automatically notifies all existing club members
+// Publishes through the trusted server so member profiles stay private to officers
 export async function createClubAnnouncement(input: CreateAnnouncementInput) {
-  const db = await getDb();
-  const members = await getDocs(
-    query(
-      collection(db, COLLECTIONS.users),
-      where("joinedClubIds", "array-contains", input.clubId),
-    ),
-  );
+  const { auth } = await import("@/lib/firebase/client");
+  if (!auth.currentUser) {
+    throw new Error("Sign in before publishing an announcement.");
+  }
 
-  const announcementRef = doc(collection(db, COLLECTIONS.announcements));
-  const batch = await createAuditedBatch(db, "clubOfficer", {
-    action: "officer.announcement_created",
-    targetType: "announcement",
-    targetId: announcementRef.id,
-    clubId: input.clubId,
+  const [idToken, appCheckHeaders] = await Promise.all([
+    getIdToken(auth.currentUser),
+    getAppCheckRequestHeaders(),
+  ]);
+  const response = await fetch("/api/club/announcements", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "content-type": "application/json",
+      Authorization: `Bearer ${idToken}`,
+      ...appCheckHeaders,
+    },
+    body: JSON.stringify(input),
   });
-  batch.set(announcementRef, {
-    ...input,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  const result = (await response.json().catch(() => null)) as {
+    error?: unknown;
+    id?: unknown;
+  } | null;
 
-  members.forEach((member) => {
-    batch.set(doc(collection(db, COLLECTIONS.notifications)), {
-      userId: member.id,
-      clubId: input.clubId,
-      title: input.title,
-      body: `${input.clubName} posted a new announcement.`,
-      type: "announcement",
-      status: "unread",
-      relatedHref: `/clubs/${input.clubId}`,
-      createdAt: serverTimestamp(),
-    });
-  });
-  await batch.commit();
-  return announcementRef.id;
+  if (!response.ok || typeof result?.id !== "string") {
+    throw new Error(
+      typeof result?.error === "string"
+        ? result.error
+        : "Unable to publish the announcement.",
+    );
+  }
+
+  return result.id;
 }
 
 export async function updateClubAnnouncement(

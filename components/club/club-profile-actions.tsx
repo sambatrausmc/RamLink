@@ -19,7 +19,7 @@ type ClubProfileActionsProps = {
 };
 
 export function ClubProfileActions({ club }: ClubProfileActionsProps) {
-  const { profile, refreshProfile, user } = useAuth();
+  const { profile, user } = useAuth();
   const [status, setStatus] = useState<Club["membershipStatus"]>(
     club.membershipStatus ?? "notJoined",
   );
@@ -107,7 +107,6 @@ export function ClubProfileActions({ club }: ClubProfileActionsProps) {
       const nextSaved = await toggleSavedClub(user.uid, club.id, isSaved);
       setSavedOverride(nextSaved);
       setFeedback(nextSaved ? "Club saved." : "Club removed from saved items.");
-      await refreshProfile();
     } catch {
       setFeedback("Unable to update saved club right now.");
     } finally {
