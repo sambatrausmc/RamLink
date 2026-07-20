@@ -38,6 +38,46 @@ describe("authentication CSRF protection", () => {
     expect(verifyCsrfRequest(createRequest(token), token, now)).toBe(true);
   });
 
+  it("accepts the public App Hosting origin behind its HTTPS proxy", () => {
+    const now = Date.now();
+    const token = createCsrfToken(now);
+    const publicHost = "ramlink--csc325-firebase-app.us-east4.hosted.app";
+    const request = new Request(
+      "http://127.0.0.1:8080/api/auth/session",
+      {
+        method: "POST",
+        headers: {
+          [CSRF_HEADER_NAME]: token,
+          origin: `https://${publicHost}`,
+          "x-forwarded-host": publicHost,
+          "x-forwarded-proto": "https",
+        },
+      },
+    );
+
+    expect(verifyCsrfRequest(request, token, now)).toBe(true);
+  });
+
+  it("rejects a cross-origin request behind the App Hosting proxy", () => {
+    const now = Date.now();
+    const token = createCsrfToken(now);
+    const request = new Request(
+      "http://127.0.0.1:8080/api/auth/session",
+      {
+        method: "POST",
+        headers: {
+          [CSRF_HEADER_NAME]: token,
+          origin: "https://attacker.example",
+          "x-forwarded-host":
+            "ramlink--csc325-firebase-app.us-east4.hosted.app",
+          "x-forwarded-proto": "https",
+        },
+      },
+    );
+
+    expect(verifyCsrfRequest(request, token, now)).toBe(false);
+  });
+
   it.each([
     ["missing header", undefined, "cookie", "https://ramlink.example"],
     ["missing cookie", "header", undefined, "https://ramlink.example"],

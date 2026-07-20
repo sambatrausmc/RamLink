@@ -23,6 +23,34 @@ function tokensMatch(left: string, right: string) {
   );
 }
 
+function firstHeaderValue(value: string | null) {
+  return value?.split(",", 1)[0]?.trim() || null;
+}
+
+function getExpectedOrigins(request: Request) {
+  const requestUrl = new URL(request.url);
+  const expectedOrigins = new Set([requestUrl.origin]);
+  const forwardedHost =
+    firstHeaderValue(request.headers.get("x-forwarded-host")) ??
+    firstHeaderValue(request.headers.get("x-fh-requested-host")) ??
+    firstHeaderValue(request.headers.get("host"));
+  const forwardedProtocol =
+    firstHeaderValue(request.headers.get("x-forwarded-proto")) ??
+    requestUrl.protocol.slice(0, -1);
+
+  if (forwardedHost && forwardedProtocol) {
+    try {
+      expectedOrigins.add(
+        new URL(`${forwardedProtocol}://${forwardedHost}`).origin,
+      );
+    } catch {
+      // The request URL remains the safe fallback for malformed proxy headers.
+    }
+  }
+
+  return expectedOrigins;
+}
+
 export function isCsrfTokenFresh(token: string, now = Date.now()) {
   const [issuedAtText, randomValue, extraValue] = token.split(".");
   const issuedAt = Number(issuedAtText);
@@ -44,12 +72,12 @@ export function verifyCsrfRequest(
 ) {
   const headerToken = request.headers.get(CSRF_HEADER_NAME);
   const origin = request.headers.get("origin");
-  const expectedOrigin = new URL(request.url).origin;
 
   return Boolean(
     cookieToken &&
       headerToken &&
-      origin === expectedOrigin &&
+      origin &&
+      getExpectedOrigins(request).has(origin) &&
       isCsrfTokenFresh(cookieToken, now) &&
       isCsrfTokenFresh(headerToken, now) &&
       tokensMatch(cookieToken, headerToken),
