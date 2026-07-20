@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import type { DocumentReference, Firestore } from "firebase-admin/firestore";
+import {
+  FieldValue,
+  type DocumentReference,
+  type Firestore,
+} from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import { verifyAppCheckRequest } from "@/lib/server/app-check";
@@ -40,6 +44,7 @@ async function getOwnedRecordReferences(db: Firestore, uid: string) {
 
 async function reconcileProfileReferences(db: Firestore, uid: string) {
   const profileRef = db.collection(COLLECTIONS.users).doc(uid);
+  const auditRef = db.collection(COLLECTIONS.auditLogs).doc();
 
   await db.runTransaction(async (transaction) => {
     const profileSnapshot = await transaction.get(profileRef);
@@ -75,6 +80,17 @@ async function reconcileProfileReferences(db: Firestore, uid: string) {
       }
     });
 
+    const role = ["student", "clubOfficer", "admin"].includes(String(profile.role))
+      ? String(profile.role)
+      : "student";
+    transaction.set(auditRef, {
+      actorId: uid,
+      actorRole: role,
+      action: "account.deleted",
+      targetType: "user",
+      targetId: uid,
+      createdAt: FieldValue.serverTimestamp(),
+    });
     transaction.delete(profileRef);
   });
 }

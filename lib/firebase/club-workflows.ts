@@ -9,11 +9,12 @@ import {
   query,
   runTransaction,
   serverTimestamp,
-  updateDoc,
   where,
-  writeBatch,
 } from "firebase/firestore";
-import { createAuditedBatch } from "@/lib/firebase/audit-logs";
+import {
+  createAuditedBatch,
+  prepareClientAuditLog,
+} from "@/lib/firebase/audit-logs";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import type {
   Club,
@@ -314,6 +315,11 @@ export async function updateJoinRequestStatus(
   const db = await getDb();
   const requestRef = doc(db, COLLECTIONS.joinRequests, requestId);
   const notificationRef = doc(collection(db, COLLECTIONS.notifications));
+  const audit = await prepareClientAuditLog(db, "clubOfficer", {
+    action: "officer.join_request_updated",
+    targetType: "joinRequest",
+    targetId: requestId,
+  });
 
   await runTransaction(db, async (transaction) => {
     const requestSnapshot = await transaction.get(requestRef);
@@ -369,6 +375,7 @@ export async function updateJoinRequestStatus(
       relatedHref: "/dashboard",
       createdAt: serverTimestamp(),
     });
+    transaction.set(audit.reference, audit.data);
   });
 }
 
@@ -386,8 +393,12 @@ export async function replyToInquiry(inquiryId: string, body: string) {
   const existingReplies = Array.isArray(inquiry.replies) ? inquiry.replies : [];
   const reply = buildOfficerReply(existingReplies, body);
 
-  const batch = writeBatch(db);
-  // Append reply and ensure inquiry status remains open
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.inquiry_replied",
+    targetType: "inquiry",
+    targetId: inquiryId,
+    clubId: String(inquiry.clubId ?? ""),
+  });
   batch.update(inquiryRef, {
     replies: [...existingReplies, reply],
     updatedAt: serverTimestamp(),
@@ -413,8 +424,14 @@ export async function replyToInquiry(inquiryId: string, body: string) {
 // Marks an inquiry as resolved
 export async function resolveInquiry(inquiryId: string) {
   const db = await getDb();
-  await updateDoc(doc(db, COLLECTIONS.inquiries, inquiryId), {
+  const batch = await createAuditedBatch(db, "clubOfficer", {
+    action: "officer.inquiry_resolved",
+    targetType: "inquiry",
+    targetId: inquiryId,
+  });
+  batch.update(doc(db, COLLECTIONS.inquiries, inquiryId), {
     status: "resolved" satisfies InquiryStatus,
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
 }

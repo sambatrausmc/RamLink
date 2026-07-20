@@ -10,6 +10,7 @@ import { COLLECTIONS } from "@/lib/firebase/collections";
 export type AuditActorRole = "admin" | "clubOfficer";
 
 export type AuditAction =
+  | "account.deleted"
   | "admin.club_created"
   | "admin.club_status_updated"
   | "admin.report_status_updated"

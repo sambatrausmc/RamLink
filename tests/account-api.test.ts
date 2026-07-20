@@ -14,6 +14,7 @@ const adminMocks = vi.hoisted(() => {
     delete: vi.fn(),
     get: vi.fn(),
     getAll: vi.fn(),
+    set: vi.fn(),
     update: vi.fn(),
   };
   const auth = {
@@ -191,6 +192,14 @@ describe("account deletion API", () => {
     );
     expect(adminMocks.transaction.delete).toHaveBeenCalledWith(
       reference("users/student-1"),
+    );
+    expect(adminMocks.transaction.set).toHaveBeenCalledWith(
+      expect.objectContaining({ path: "auditLogs/undefined" }),
+      expect.objectContaining({
+        actorId: "student-1",
+        action: "account.deleted",
+        targetId: "student-1",
+      }),
     );
     expect(adminMocks.auth.deleteUser).toHaveBeenCalledWith("student-1");
   });
