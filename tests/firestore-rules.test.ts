@@ -383,7 +383,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     expect(eventSnapshot.data()?.rsvpCount).toBe(0);
   });
 
-  it("allows a student to cancel only their own pending request", async () => {
+  it("reserves join request cancellation for the protected API", async () => {
     const studentDb = verifiedContext("student-1").firestore();
     const unrelatedDb = verifiedContext("unrelated-1").firestore();
 
@@ -391,12 +391,12 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
       deleteDoc(doc(unrelatedDb, "joinRequests/request-1")),
     );
 
-    await assertSucceeds(
+    await assertFails(
       deleteDoc(doc(studentDb, "joinRequests/request-1")),
     );
   });
 
-  it("requires deterministic IDs for new join requests", async () => {
+  it("reserves join request creation for the protected API", async () => {
     const studentDb = verifiedContext("student-1").firestore();
     const requestData = {
       clubId: "club-2",
@@ -414,7 +414,6 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
 
     const requestRef = doc(studentDb, "joinRequests/student-1_club-2");
-    await assertSucceeds(setDoc(requestRef, requestData));
     await assertFails(setDoc(requestRef, requestData));
     await assertFails(
       setDoc(doc(studentDb, "joinRequests/student-1_club-1"), {
@@ -425,11 +424,11 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
   });
 
-  it("allows rejected requests to reopen without bypassing approval", async () => {
+  it("reserves rejected request reopening for the protected API", async () => {
     const studentDb = verifiedContext("student-1").firestore();
     const requestRef = doc(studentDb, "joinRequests/student-1_club-1");
 
-    await assertSucceeds(
+    await assertFails(
       updateDoc(requestRef, {
         message: "I am submitting an updated request.",
         status: "pending",
@@ -446,14 +445,6 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
       }),
     );
 
-    await assertFails(
-      updateDoc(requestRef, {
-        message: "Reset approved request.",
-        status: "pending",
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }),
-    );
   });
 
   it("allows rejection but blocks standalone membership approval", async () => {

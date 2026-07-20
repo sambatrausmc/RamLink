@@ -499,57 +499,6 @@ service cloud.firestore {
         );
     }
 
-    function validNewJoinRequest(requestId) {
-      let data = request.resource.data;
-      return isVerifiedFarmingdaleUser() &&
-        data.keys().hasAll([
-          "clubId",
-          "clubName",
-          "studentId",
-          "studentName",
-          "message",
-          "status",
-          "createdAt",
-          "updatedAt"
-        ]) &&
-        data.keys().hasOnly([
-          "clubId",
-          "clubName",
-          "studentId",
-          "studentName",
-          "message",
-          "status",
-          "createdAt",
-          "updatedAt"
-        ]) &&
-        requestId == request.auth.uid + "_" + data.clubId &&
-        data.clubId is string &&
-        data.clubId.size() > 0 && data.clubId.size() <= 120 &&
-        validText(data.clubName, 160) &&
-        data.studentId == request.auth.uid &&
-        validText(data.studentName, 100) &&
-        data.message is string && data.message.size() <= 1000 &&
-        data.status == "pending" &&
-        data.createdAt == request.time &&
-        data.updatedAt == request.time;
-    }
-
-    function studentReopensRejectedRequest(requestId) {
-      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
-      return isVerifiedFarmingdaleUser() &&
-        resource.data.studentId == request.auth.uid &&
-        request.resource.data.studentId == resource.data.studentId &&
-        request.resource.data.clubId == resource.data.clubId &&
-        requestId == request.auth.uid + "_" + resource.data.clubId &&
-        resource.data.status == "rejected" &&
-        request.resource.data.status == "pending" &&
-        request.resource.data.message is string &&
-        request.resource.data.message.size() <= 1000 &&
-        request.resource.data.createdAt == request.time &&
-        request.resource.data.updatedAt == request.time &&
-        changedFields.hasOnly(["message", "status", "createdAt", "updatedAt"]);
-    }
-
     function officerUpdatesJoinRequestStatus() {
       let changedFields = request.resource.data.diff(resource.data).affectedKeys();
       let studentPath = /databases/$(database)/documents/users/$(resource.data.studentId);
@@ -828,16 +777,11 @@ service cloud.firestore {
     }
 
     match /joinRequests/{requestId} {
-      allow create: if validNewJoinRequest(requestId);
+      allow create: if false;
       allow read: if isVerifiedFarmingdaleUser() &&
         (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
-      allow update: if
-        officerUpdatesJoinRequestStatus() ||
-        studentReopensRejectedRequest(requestId);
-      allow delete: if isAdmin() ||
-        (isVerifiedFarmingdaleUser() &&
-          resource.data.studentId == request.auth.uid &&
-          resource.data.status == "pending");
+      allow update: if officerUpdatesJoinRequestStatus();
+      allow delete: if isAdmin();
     }
 
     match /inquiries/{inquiryId} {

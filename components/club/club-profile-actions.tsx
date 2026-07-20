@@ -85,7 +85,7 @@ export function ClubProfileActions({ club }: ClubProfileActionsProps) {
     setIsJoining(true);
     setFeedback("");
     try {
-      await cancelJoinRequest(user.uid, joinRequestId);
+      await cancelJoinRequest(joinRequestId);
       setStatus("notJoined");
       setJoinRequestId(null);
       setFeedback("Join request cancelled.");

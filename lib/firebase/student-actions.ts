@@ -14,6 +14,7 @@ import {
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { COLLECTIONS } from "@/lib/firebase/collections";
+import { protectedApiRequest } from "@/lib/firebase/protected-api";
 import type {
   ClubInquiry,
   InquiryStatus,
@@ -228,77 +229,33 @@ export async function toggleEventRsvp(
 export async function createJoinRequest(
   input: JoinRequestInput,
 ): Promise<JoinRequest> {
-  const db = await getDb();
-
-  const existingRequests = await getStudentJoinRequests(input.userId);
-  const activeRequest = existingRequests.find(
-    (request) =>
-      request.clubId === input.clubId &&
-      (request.status === "pending" || request.status === "approved"),
-  );
-  if (activeRequest) {
-    throw new Error("An active join request already exists for this club.");
-  }
-
-  const request = {
-    clubId: input.clubId,
-    clubName: input.clubName ?? "",
-    studentId: input.userId,
-    studentName: input.studentName ?? "Student",
-    message: input.message,
-    status: "pending" as RequestStatus,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-
-  const requestRef = doc(
-    db,
-    COLLECTIONS.joinRequests,
-    `${input.userId}_${input.clubId}`,
-  );
-  const notificationRef = doc(collection(db, COLLECTIONS.notifications));
-  const batch = writeBatch(db);
-
-  // Security rules reject overwriting active requests and permit rejected
-  // requests to reopen. Avoid reading a new document before it exists.
-  batch.set(requestRef, request, { merge: true });
-  batch.set(notificationRef, {
-    userId: input.userId,
-    clubId: input.clubId,
-    title: "Join request sent",
-    body: "Your membership request was sent to the club officers.",
-    type: "joinRequest",
-    status: "unread",
-    relatedHref: "/dashboard",
-    createdAt: serverTimestamp(),
+  const request = await protectedApiRequest<{
+    clubId: string;
+    id: string;
+    status: RequestStatus;
+  }>("/api/student/join-requests", {
+    method: "POST",
+    body: JSON.stringify({ clubId: input.clubId, message: input.message }),
   });
-  await batch.commit();
 
   return {
-    id: requestRef.id,
+    id: request.id,
     clubId: request.clubId,
-    studentId: request.studentId,
-    message: request.message,
+    studentId: input.userId,
+    message: input.message,
     status: request.status,
     createdAt: "Just now",
   } satisfies JoinRequest;
 }
 
-export async function cancelJoinRequest(userId: string, requestId: string) {
-  const db = await getDb();
-  const requestRef = doc(db, COLLECTIONS.joinRequests, requestId);
-
-  await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(requestRef);
-    if (!snapshot.exists()) {
-      throw new Error("Join request not found.");
-    }
-    const request = snapshot.data();
-    if (request.studentId !== userId || request.status !== "pending") {
-      throw new Error("Only your pending request can be cancelled.");
-    }
-    transaction.delete(requestRef);
-  });
+export async function cancelJoinRequest(requestId: string) {
+  await protectedApiRequest<{ deleted: boolean }>(
+    "/api/student/join-requests",
+    {
+      method: "DELETE",
+      body: JSON.stringify({ requestId }),
+    },
+  );
 }
 
 // Creates a student inquiry thread and triggers an immediate feedback notification
