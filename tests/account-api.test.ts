@@ -14,6 +14,7 @@ const adminMocks = vi.hoisted(() => {
     delete: vi.fn(),
     get: vi.fn(),
     getAll: vi.fn(),
+    set: vi.fn(),
     update: vi.fn(),
   };
   const auth = {
@@ -48,9 +49,20 @@ const adminMocks = vi.hoisted(() => {
   };
 });
 
+const appCheckMocks = vi.hoisted(() => ({ verify: vi.fn() }));
+const rateLimitMocks = vi.hoisted(() => ({ consume: vi.fn() }));
+
 vi.mock("@/lib/firebase/admin", () => ({
   getAdminAuth: () => adminMocks.auth,
   getAdminDb: () => adminMocks.db,
+}));
+
+vi.mock("@/lib/server/app-check", () => ({
+  verifyAppCheckRequest: appCheckMocks.verify,
+}));
+
+vi.mock("@/lib/server/rate-limit", () => ({
+  consumeRateLimit: rateLimitMocks.consume,
 }));
 
 import { DELETE } from "@/app/api/account/route";
@@ -58,7 +70,10 @@ import { DELETE } from "@/app/api/account/route";
 function deletionRequest(token?: string) {
   return new Request("http://localhost/api/account", {
     method: "DELETE",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "x-request-id": "request_12345",
+    },
   });
 }
 
@@ -69,6 +84,8 @@ function reference(path: string): TestReference {
 describe("account deletion API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    appCheckMocks.verify.mockResolvedValue(true);
+    rateLimitMocks.consume.mockResolvedValue({ allowed: true });
     adminMocks.batchCommits.length = 0;
     adminMocks.batchDeletes.length = 0;
     adminMocks.state.batchFailureAt = -1;
@@ -115,6 +132,15 @@ describe("account deletion API", () => {
     expect(response.status).toBe(401);
   });
 
+  it("returns 401 when App Check validation fails", async () => {
+    appCheckMocks.verify.mockResolvedValue(false);
+
+    const response = await DELETE(deletionRequest("fresh-token"));
+
+    expect(response.status).toBe(401);
+    expect(adminMocks.auth.verifyIdToken).not.toHaveBeenCalled();
+  });
+
   it("returns 401 for an invalid token", async () => {
     adminMocks.auth.verifyIdToken.mockRejectedValue(new Error("invalid"));
     const response = await DELETE(deletionRequest("invalid-token"));
@@ -130,6 +156,19 @@ describe("account deletion API", () => {
     expect(response.status).toBe(409);
   });
 
+  it("returns retry guidance after too many deletion requests", async () => {
+    rateLimitMocks.consume.mockResolvedValue({
+      allowed: false,
+      retryAfterSeconds: 120,
+    });
+
+    const response = await DELETE(deletionRequest("fresh-token"));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("120");
+    expect(adminMocks.auth.deleteUser).not.toHaveBeenCalled();
+  });
+
   it("reconciles membership and RSVP counters before deleting Auth", async () => {
     adminMocks.state.profileData = {
       joinedClubIds: ["club-1", "club-2", "club-2"],
@@ -142,6 +181,7 @@ describe("account deletion API", () => {
     const response = await DELETE(deletionRequest("fresh-token"));
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("x-request-id")).toBe("request_12345");
     expect(adminMocks.transaction.update).toHaveBeenCalledWith(
       reference("clubs/club-1"),
       { memberCount: 2 },
@@ -156,6 +196,14 @@ describe("account deletion API", () => {
     );
     expect(adminMocks.transaction.delete).toHaveBeenCalledWith(
       reference("users/student-1"),
+    );
+    expect(adminMocks.transaction.set).toHaveBeenCalledWith(
+      expect.objectContaining({ path: "auditLogs/undefined" }),
+      expect.objectContaining({
+        actorId: "student-1",
+        action: "account.deleted",
+        targetId: "student-1",
+      }),
     );
     expect(adminMocks.auth.deleteUser).toHaveBeenCalledWith("student-1");
   });

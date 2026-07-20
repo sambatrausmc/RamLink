@@ -76,7 +76,7 @@ export function ClubResourcesClient() {
     if (!clubId) return;
     const form = new FormData(formEvent.currentTarget);
     try {
-      await updateClubResource(resourceId, {
+      await updateClubResource(resourceId, clubId, {
         title: String(form.get("title") ?? "").trim(),
         description: String(form.get("description") ?? "").trim(),
         type: parseResourceType(String(form.get("type") ?? "Link")),
@@ -92,7 +92,7 @@ export function ClubResourcesClient() {
   async function handleDelete(resourceId: string) {
     if (!clubId || !window.confirm("Delete this resource?")) return;
     try {
-      await deleteClubResource(resourceId);
+      await deleteClubResource(resourceId, clubId);
       await loadResources(clubId);
       setFeedback("Resource deleted.");
     } catch {

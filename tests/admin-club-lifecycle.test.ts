@@ -9,9 +9,17 @@ const firestoreMocks = vi.hoisted(() => {
   return {
     runTransaction: vi.fn(),
     transaction,
-    updateDoc: vi.fn(),
+    batch: {
+      commit: vi.fn(),
+      update: vi.fn(),
+    },
   };
 });
+
+const auditMocks = vi.hoisted(() => ({
+  createBatch: vi.fn(),
+  prepare: vi.fn(),
+}));
 
 vi.mock("@/lib/firebase/client", () => ({ db: {} }));
 
@@ -21,7 +29,11 @@ vi.mock("firebase/firestore", () => ({
   })),
   runTransaction: firestoreMocks.runTransaction,
   serverTimestamp: vi.fn(() => ({ operation: "serverTimestamp" })),
-  updateDoc: firestoreMocks.updateDoc,
+}));
+
+vi.mock("@/lib/firebase/audit-logs", () => ({
+  createAuditedBatch: auditMocks.createBatch,
+  prepareClientAuditLog: auditMocks.prepare,
 }));
 
 import {
@@ -40,6 +52,11 @@ const clubInput = {
 describe("admin club lifecycle", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    auditMocks.createBatch.mockResolvedValue(firestoreMocks.batch);
+    auditMocks.prepare.mockResolvedValue({
+      data: { action: "admin.club_created" },
+      reference: { path: "auditLogs/audit-1" },
+    });
     firestoreMocks.transaction.get.mockResolvedValue({ exists: () => false });
     firestoreMocks.runTransaction.mockImplementation(
       async (_database, callback) => callback(firestoreMocks.transaction),
@@ -58,6 +75,18 @@ describe("admin club lifecycle", () => {
         contactEmail: "robotics@example.edu",
         status: "pending",
       }),
+    );
+    expect(auditMocks.prepare).toHaveBeenCalledWith(
+      {},
+      "admin",
+      expect.objectContaining({
+        action: "admin.club_created",
+        targetId: "robo-club",
+      }),
+    );
+    expect(firestoreMocks.transaction.set).toHaveBeenCalledWith(
+      { path: "auditLogs/audit-1" },
+      { action: "admin.club_created" },
     );
   });
 
@@ -86,9 +115,15 @@ describe("admin club lifecycle", () => {
   it("updates a club status only after Firestore accepts the write", async () => {
     await updateClubStatus("robo-club", "active");
 
-    expect(firestoreMocks.updateDoc).toHaveBeenCalledWith(
+    expect(firestoreMocks.batch.update).toHaveBeenCalledWith(
       { path: "clubs/robo-club" },
       expect.objectContaining({ status: "active" }),
+    );
+    expect(firestoreMocks.batch.commit).toHaveBeenCalledOnce();
+    expect(auditMocks.createBatch).toHaveBeenCalledWith(
+      {},
+      "admin",
+      expect.objectContaining({ action: "admin.club_status_updated" }),
     );
   });
 });

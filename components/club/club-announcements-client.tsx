@@ -90,7 +90,7 @@ export function ClubAnnouncementsClient() {
     if (!clubId) return;
     const form = new FormData(formEvent.currentTarget);
     try {
-      await updateClubAnnouncement(announcementId, {
+      await updateClubAnnouncement(announcementId, clubId, {
         title: String(form.get("title") ?? "").trim(),
         body: String(form.get("body") ?? "").trim(),
         priority: form.get("priority") === "important" ? "important" : "normal",
@@ -105,7 +105,7 @@ export function ClubAnnouncementsClient() {
   async function handleDelete(announcementId: string) {
     if (!clubId || !window.confirm("Delete this announcement?")) return;
     try {
-      await deleteClubAnnouncement(announcementId);
+      await deleteClubAnnouncement(announcementId, clubId);
       await loadAnnouncements(clubId);
       setFeedback("Announcement deleted.");
     } catch {
