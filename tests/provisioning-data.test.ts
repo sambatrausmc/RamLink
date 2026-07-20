@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import catalog from "../scripts/provisioning/data/catalog.json";
 import events from "../scripts/provisioning/data/events.json";
@@ -15,6 +16,26 @@ function expectUniqueIds(records: RecordWithId[]) {
 }
 
 describe("backend provisioning data", () => {
+  it("validates records without Firebase credentials", () => {
+    const environment = { ...process.env };
+    delete environment.GOOGLE_APPLICATION_CREDENTIALS;
+    delete environment.FIREBASE_CLIENT_EMAIL;
+    delete environment.FIREBASE_PRIVATE_KEY;
+
+    const output = execFileSync(
+      process.execPath,
+      ["scripts/provision-demo-data.mjs", "--dry-run"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: environment,
+      },
+    );
+
+    expect(output).toContain("clubs: 4 records validated");
+    expect(output).toContain("events: 6 records validated");
+  });
+
   it("contains enough records for a multi-feature demonstration", () => {
     expect(catalog.clubs.length).toBeGreaterThanOrEqual(4);
     expect(catalog.interests.length).toBeGreaterThanOrEqual(6);

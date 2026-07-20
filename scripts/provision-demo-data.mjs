@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import { adminDb, FieldValue } from "./provisioning/admin-client.mjs";
 
 const dataDirectory = new URL("./provisioning/data/", import.meta.url);
 const dryRun = process.argv.includes("--dry-run");
@@ -39,7 +38,7 @@ function validateRecords() {
   }
 }
 
-function addTimestamps(collectionName, data) {
+function addTimestamps(collectionName, data, FieldValue) {
   if (collectionName === "interests") {
     return data;
   }
@@ -60,13 +59,15 @@ async function provisionDemoData() {
     return;
   }
 
+  const { adminDb, FieldValue } =
+    await import("./provisioning/admin-client.mjs");
   const batch = adminDb.batch();
 
   for (const [collectionName, entries] of Object.entries(records)) {
     for (const entry of entries) {
       const { id, ...data } = entry;
       const reference = adminDb.collection(collectionName).doc(id);
-      batch.set(reference, addTimestamps(collectionName, data));
+      batch.set(reference, addTimestamps(collectionName, data, FieldValue));
     }
   }
 
