@@ -26,9 +26,13 @@ export function getSafeNextPath(value: string | null | undefined) {
       return null;
     }
     if (
-      ["/forgot-password", "/login", "/register", "/verify-email"].includes(
-        parsedUrl.pathname,
-      )
+      [
+        "/forgot-password",
+        "/login",
+        "/register",
+        "/verification-complete",
+        "/verify-email",
+      ].includes(parsedUrl.pathname)
     ) {
       return null;
     }

@@ -37,7 +37,10 @@ describe("student event and club cards", () => {
     mocks.toggleSavedEvent.mockResolvedValue(true);
   });
 
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it("renders club details with the correct profile link", () => {
     const club = clubs[0];
@@ -67,5 +70,29 @@ describe("student event and club cards", () => {
     expect(screen.getByText(`${event.rsvpCount + 1} RSVPs`)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Cancel RSVP" })).toBeTruthy();
     expect(mocks.refreshProfile).not.toHaveBeenCalled();
+  });
+
+  it("reports permission-denied RSVP failures for diagnosis", async () => {
+    const event = events[1];
+    const error = Object.assign(new Error("Missing permissions"), {
+      code: "permission-denied",
+    });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    mocks.toggleEventRsvp.mockRejectedValue(error);
+
+    render(<EventCard event={event} />);
+    fireEvent.click(screen.getByRole("button", { name: "RSVP" }));
+
+    expect(
+      await screen.findByText(
+        "Your profile could not update this RSVP. Sign out, sign back in, and try again.",
+      ),
+    ).toBeTruthy();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Unable to update event RSVP.",
+      { error, eventId: event.id },
+    );
   });
 });
