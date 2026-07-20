@@ -75,8 +75,12 @@ export function ClubAnnouncementsClient() {
       event.currentTarget.reset();
       await loadAnnouncements(clubId);
       setFeedback("Announcement published to Firestore.");
-    } catch {
-      setFeedback("Unable to publish the announcement.");
+    } catch (error) {
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : "Unable to publish the announcement.",
+      );
     } finally {
       setSaving(false);
     }
