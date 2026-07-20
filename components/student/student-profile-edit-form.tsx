@@ -50,13 +50,14 @@ export function StudentProfileEditForm({
     setIsSubmitting(true);
     try {
       if (userId) {
-        const updatedProfile = await updateStudentProfile(userId, {
+        const updates = {
           displayName: displayName.trim() || student.displayName,
           major: major.trim(),
           classYear: classYear.trim(),
           interests: selectedInterests,
-        });
-        onProfileUpdated?.(updatedProfile);
+        };
+        await updateStudentProfile(userId, updates);
+        onProfileUpdated?.({ ...student, ...updates });
       }
       setSaved(true);
     } catch {

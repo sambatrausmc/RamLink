@@ -152,9 +152,4 @@ export async function updateStudentProfile(
     ...input,
     updatedAt: serverTimestamp(),
   });
-  const updatedProfile = await getStudentProfile(uid);
-  if (!updatedProfile) {
-    throw new Error("Student profile was not found after update.");
-  }
-  return updatedProfile;
 }
