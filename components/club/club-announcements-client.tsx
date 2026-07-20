@@ -63,7 +63,8 @@ export function ClubAnnouncementsClient() {
     if (!clubId || !club) return;
     setSaving(true);
     setFeedback("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       await createClubAnnouncement({
         clubId,
@@ -72,7 +73,7 @@ export function ClubAnnouncementsClient() {
         body: String(form.get("body") ?? "").trim(),
         priority: form.get("priority") === "important" ? "important" : "normal",
       });
-      event.currentTarget.reset();
+      formElement.reset();
       await loadAnnouncements(clubId);
       setFeedback("Announcement published to Firestore.");
     } catch (error) {
