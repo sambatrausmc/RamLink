@@ -43,6 +43,7 @@ vi.mock("@/lib/firebase/client", () => ({
 describe("verified student registration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     mocks.ensurePersistence.mockResolvedValue(undefined);
     mocks.createUser.mockResolvedValue({ user: mocks.user });
     mocks.updateProfile.mockResolvedValue(undefined);
@@ -126,6 +127,16 @@ describe("verified student registration", () => {
       mocks.auth,
       "student@farmingdale.edu",
     );
+  });
+
+  it("blocks repeated password-reset email requests during the cooldown", async () => {
+    const { resetPasswordForEmail } = await import("@/lib/firebase/auth");
+
+    await resetPasswordForEmail("student@farmingdale.edu");
+    await expect(
+      resetPasswordForEmail("student@farmingdale.edu"),
+    ).rejects.toThrow(/Wait \d+ seconds/);
+    expect(mocks.resetPassword).toHaveBeenCalledOnce();
   });
 
   it("creates a server session after verified login", async () => {
