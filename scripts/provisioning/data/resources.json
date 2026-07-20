@@ -1,0 +1,34 @@
+[
+  {
+    "id": "cpc-github-guide",
+    "clubId": "cs-club",
+    "title": "GitHub Student Guide",
+    "description": "A starter guide for contributing to club software projects.",
+    "type": "Guide",
+    "url": "https://docs.github.com/en/get-started"
+  },
+  {
+    "id": "fbl-resume-guide",
+    "clubId": "business-leaders",
+    "title": "Resume Preparation Guide",
+    "description": "A checklist students can use before the resume workshop.",
+    "type": "Guide",
+    "url": "https://www.careeronestop.org/JobSearch/Resumes/resumes.aspx"
+  },
+  {
+    "id": "gcc-volunteer-form",
+    "clubId": "green-campus",
+    "title": "Volunteer Interest Form",
+    "description": "Register interest in upcoming campus service activities.",
+    "type": "Form",
+    "url": "https://www.farmingdale.edu/"
+  },
+  {
+    "id": "swc-campus-support",
+    "clubId": "wellness-club",
+    "title": "Campus Student Support",
+    "description": "Find Farmingdale State College student support information.",
+    "type": "Link",
+    "url": "https://www.farmingdale.edu/"
+  }
+]

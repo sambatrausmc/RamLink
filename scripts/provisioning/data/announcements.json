@@ -1,0 +1,34 @@
+[
+  {
+    "id": "cpc-welcome",
+    "clubId": "cs-club",
+    "clubName": "Computer Programming Club",
+    "title": "Welcome to the fall schedule",
+    "body": "Weekly meetings begin Tuesday. New members are welcome to attend and meet the officer team.",
+    "priority": "important"
+  },
+  {
+    "id": "fbl-career-fair",
+    "clubId": "business-leaders",
+    "clubName": "Future Business Leaders",
+    "title": "Career fair preparation",
+    "body": "Bring a draft resume to our next meeting for peer review and interview practice.",
+    "priority": "normal"
+  },
+  {
+    "id": "gcc-volunteers",
+    "clubId": "green-campus",
+    "clubName": "Green Campus Coalition",
+    "title": "Cleanup volunteers needed",
+    "body": "Volunteer registration is open for Campus Cleanup Day. Supplies will be provided.",
+    "priority": "important"
+  },
+  {
+    "id": "swc-weekly-checkin",
+    "clubId": "wellness-club",
+    "clubName": "Student Wellness Club",
+    "title": "Weekly wellness check-in",
+    "body": "Join Monday's discussion about balancing classes, work, and campus activities.",
+    "priority": "normal"
+  }
+]
