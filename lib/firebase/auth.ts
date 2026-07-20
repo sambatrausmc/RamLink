@@ -97,9 +97,6 @@ export async function loginWithEmailAndPassword(input: LoginInput) {
     email,
     input.password,
   );
-  if (credential.user.emailVerified) {
-    await createServerSession(credential.user);
-  }
   return credential.user;
 }
 export async function logoutCurrentUser() {

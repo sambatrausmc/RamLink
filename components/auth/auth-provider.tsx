@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -48,6 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useState<ProfileStatus>("loading");
   const [sessionState, setSessionState] = useState<SessionState>("loading");
   const [loading, setLoading] = useState(true);
+  const sessionSyncRef = useRef<{
+    uid: string;
+    promise: Promise<boolean>;
+  } | null>(null);
 
   // Keep the Firebase Auth session and the matching Firestore user profile together.
   const loadProfile = useCallback(async (nextUser: User | null) => {
@@ -86,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const synchronizeSession = useCallback(async (nextUser: User | null) => {
     if (!nextUser) {
+      sessionSyncRef.current = null;
       setSessionState("ready");
       return true;
     }
@@ -94,20 +100,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false;
     }
 
-    setSessionState("loading");
-    try {
-      const { createServerSession, readServerSession } = await import(
-        "@/lib/firebase/server-session"
-      );
-      const currentSession = await readServerSession();
-      if (!currentSession || currentSession.uid !== nextUser.uid) {
-        await createServerSession(nextUser);
+    const activeSync = sessionSyncRef.current;
+    if (activeSync?.uid === nextUser.uid) {
+      return activeSync.promise;
+    }
+
+    const syncPromise = (async () => {
+      setSessionState("loading");
+      try {
+        const { createServerSession, readServerSession } = await import(
+          "@/lib/firebase/server-session"
+        );
+        const currentSession = await readServerSession();
+        if (!currentSession || currentSession.uid !== nextUser.uid) {
+          await createServerSession(nextUser);
+        }
+        setSessionState("ready");
+        return true;
+      } catch {
+        setSessionState("error");
+        return false;
       }
-      setSessionState("ready");
-      return true;
-    } catch {
-      setSessionState("error");
-      return false;
+    })();
+
+    sessionSyncRef.current = {
+      uid: nextUser.uid,
+      promise: syncPromise,
+    };
+
+    try {
+      return await syncPromise;
+    } finally {
+      if (sessionSyncRef.current?.promise === syncPromise) {
+        sessionSyncRef.current = null;
+      }
     }
   }, []);
 
