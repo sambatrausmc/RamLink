@@ -48,4 +48,8 @@ test("student can sign in and open protected pages", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Report Content" }),
   ).toBeVisible();
+  await page.goto("/club/homepage");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goto("/admin/homepage");
+  await expect(page).toHaveURL(/\/dashboard$/);
 });
