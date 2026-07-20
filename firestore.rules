@@ -51,6 +51,196 @@ service cloud.firestore {
           clubId in userDoc().data.managedClubIds);
     }
 
+    function validText(value, maximumLength) {
+      return value is string && value.size() > 0 && value.size() <= maximumLength;
+    }
+
+    function validCategory(value) {
+      return value in [
+        "Academic",
+        "Business",
+        "Community Service",
+        "Culture",
+        "Health",
+        "Leadership",
+        "Recreation",
+        "Technology"
+      ];
+    }
+
+    function validClubStatus(value) {
+      return value in ["pending", "active", "suspended", "archived"];
+    }
+
+    function validMembershipMutation(data) {
+      return !("membershipMutation" in data) ||
+        (data.membershipMutation is map &&
+          data.membershipMutation.keys().hasAll([
+            "requestId",
+            "studentId",
+            "clubId",
+            "countChange"
+          ]) &&
+          data.membershipMutation.keys().hasOnly([
+            "requestId",
+            "studentId",
+            "clubId",
+            "countChange"
+          ]) &&
+          validText(data.membershipMutation.requestId, 260) &&
+          validText(data.membershipMutation.studentId, 128) &&
+          validText(data.membershipMutation.clubId, 120) &&
+          data.membershipMutation.countChange in [-1, 1]);
+    }
+
+    function validClubDocument(data) {
+      return data.keys().hasAll([
+          "name",
+          "shortName",
+          "category",
+          "description",
+          "meetingSchedule",
+          "meetingLocation",
+          "contactEmail",
+          "tags",
+          "memberCount",
+          "status",
+          "updatedAt"
+        ]) &&
+        data.keys().hasOnly([
+          "name",
+          "shortName",
+          "category",
+          "description",
+          "meetingSchedule",
+          "meetingLocation",
+          "contactEmail",
+          "tags",
+          "memberCount",
+          "status",
+          "nextEventId",
+          "isSuggested",
+          "createdAt",
+          "updatedAt",
+          "membershipMutation"
+        ]) &&
+        validText(data.name, 160) &&
+        validText(data.shortName, 30) &&
+        validCategory(data.category) &&
+        validText(data.description, 2000) &&
+        validText(data.meetingSchedule, 160) &&
+        validText(data.meetingLocation, 200) &&
+        validText(data.contactEmail, 254) &&
+        data.tags is list && data.tags.size() <= 12 &&
+        data.memberCount is int &&
+        data.memberCount >= 0 && data.memberCount <= 100000 &&
+        validClubStatus(data.status) &&
+        (!("nextEventId" in data) || validText(data.nextEventId, 120)) &&
+        (!("isSuggested" in data) || data.isSuggested is bool) &&
+        (!("createdAt" in data) || data.createdAt is timestamp) &&
+        data.updatedAt is timestamp &&
+        validMembershipMutation(data);
+    }
+
+    function validEventDocument(data) {
+      return data.keys().hasAll([
+          "clubId",
+          "clubName",
+          "title",
+          "description",
+          "date",
+          "startTime",
+          "endTime",
+          "location",
+          "rsvpCount",
+          "updatedAt"
+        ]) &&
+        data.keys().hasOnly([
+          "clubId",
+          "clubName",
+          "title",
+          "description",
+          "date",
+          "startTime",
+          "endTime",
+          "location",
+          "rsvpCount",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        validText(data.clubId, 120) &&
+        validText(data.clubName, 160) &&
+        validText(data.title, 160) &&
+        validText(data.description, 2000) &&
+        validText(data.date, 40) &&
+        validText(data.startTime, 40) &&
+        validText(data.endTime, 40) &&
+        validText(data.location, 200) &&
+        data.rsvpCount is int &&
+        data.rsvpCount >= 0 && data.rsvpCount <= 100000 &&
+        (!("createdAt" in data) || data.createdAt is timestamp) &&
+        data.updatedAt is timestamp;
+    }
+
+    function validAnnouncementDocument(data) {
+      return data.keys().hasAll([
+          "clubId",
+          "clubName",
+          "title",
+          "body",
+          "priority",
+          "updatedAt"
+        ]) &&
+        data.keys().hasOnly([
+          "clubId",
+          "clubName",
+          "title",
+          "body",
+          "priority",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        validText(data.clubId, 120) &&
+        validText(data.clubName, 160) &&
+        validText(data.title, 160) &&
+        validText(data.body, 2000) &&
+        data.priority in ["normal", "important"] &&
+        (!("createdAt" in data) || data.createdAt is timestamp) &&
+        data.updatedAt is timestamp;
+    }
+
+    function validResourceDocument(data) {
+      return data.keys().hasAll([
+          "clubId",
+          "title",
+          "description",
+          "type",
+          "url",
+          "updatedAt"
+        ]) &&
+        data.keys().hasOnly([
+          "clubId",
+          "title",
+          "description",
+          "type",
+          "url",
+          "updatedAt"
+        ]) &&
+        validText(data.clubId, 120) &&
+        validText(data.title, 160) &&
+        validText(data.description, 2000) &&
+        data.type in ["Form", "Waiver", "Guide", "Link", "Document"] &&
+        validText(data.url, 2048) &&
+        data.updatedAt is timestamp;
+    }
+
+    function validInterestDocument(data) {
+      return data.keys().hasAll(["name", "category"]) &&
+        data.keys().hasOnly(["name", "category"]) &&
+        validText(data.name, 100) &&
+        validCategory(data.category);
+    }
+
     // Couples officer membership edits to the matching request and club count.
     function officerUpdatesManagedMembership(userId) {
       let changedFields = request.resource.data.diff(resource.data).affectedKeys();
@@ -461,41 +651,86 @@ service cloud.firestore {
 
     match /clubs/{clubId} {
       allow read: if true;
-      allow create, delete: if isAdmin();
-      allow update: if isAdmin() ||
-        officerUpdatesManagedClubProfile(clubId) ||
-        officerUpdatesMembershipCount(clubId);
+      allow create: if isAdmin() &&
+        validClubDocument(request.resource.data) &&
+        request.resource.data.status == "pending" &&
+        request.resource.data.memberCount == 0 &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+      allow update: if validClubDocument(request.resource.data) &&
+        request.resource.data.updatedAt == request.time &&
+        (isAdmin() ||
+          officerUpdatesManagedClubProfile(clubId) ||
+          officerUpdatesMembershipCount(clubId));
+      allow delete: if isAdmin();
     }
 
     match /events/{eventId} {
       allow read: if true;
-      allow create: if managesClub(request.resource.data.clubId);
-      allow update: if
-        (managesClub(resource.data.clubId) &&
-          request.resource.data.clubId == resource.data.clubId) ||
-        studentUpdatesOwnRsvp(eventId);
+      allow create: if managesClub(request.resource.data.clubId) &&
+        validEventDocument(request.resource.data) &&
+        request.resource.data.rsvpCount == 0 &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+      allow update: if validEventDocument(request.resource.data) &&
+        request.resource.data.updatedAt == request.time &&
+        ((managesClub(resource.data.clubId) &&
+          request.resource.data.clubId == resource.data.clubId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "title",
+            "description",
+            "date",
+            "startTime",
+            "endTime",
+            "location",
+            "updatedAt"
+          ])) ||
+          studentUpdatesOwnRsvp(eventId));
       allow delete: if managesClub(resource.data.clubId);
     }
 
     match /announcements/{announcementId} {
       allow read: if true;
-      allow create: if managesClub(request.resource.data.clubId);
+      allow create: if managesClub(request.resource.data.clubId) &&
+        validAnnouncementDocument(request.resource.data) &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
       allow update: if managesClub(resource.data.clubId) &&
-        request.resource.data.clubId == resource.data.clubId;
+        request.resource.data.clubId == resource.data.clubId &&
+        validAnnouncementDocument(request.resource.data) &&
+        request.resource.data.updatedAt == request.time &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "title",
+          "body",
+          "priority",
+          "updatedAt"
+        ]);
       allow delete: if managesClub(resource.data.clubId);
     }
 
     match /resources/{resourceId} {
       allow read: if true;
-      allow create: if managesClub(request.resource.data.clubId);
+      allow create: if managesClub(request.resource.data.clubId) &&
+        validResourceDocument(request.resource.data) &&
+        request.resource.data.updatedAt == request.time;
       allow update: if managesClub(resource.data.clubId) &&
-        request.resource.data.clubId == resource.data.clubId;
+        request.resource.data.clubId == resource.data.clubId &&
+        validResourceDocument(request.resource.data) &&
+        request.resource.data.updatedAt == request.time &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "title",
+          "description",
+          "type",
+          "url",
+          "updatedAt"
+        ]);
       allow delete: if managesClub(resource.data.clubId);
     }
 
     match /interests/{interestId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && validInterestDocument(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /users/{userId} {

@@ -52,6 +52,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     await testEnvironment.clearFirestore();
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       const database = context.firestore();
+      const seededAt = new Date("2026-07-01T12:00:00Z");
 
       await setDoc(doc(database, "users/student-1"), {
         role: "student",
@@ -128,35 +129,60 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
 
       await setDoc(doc(database, "events/event-1"), {
         clubId: "club-1",
+        clubName: "Campus Club",
         title: "Campus Event",
+        description: "A campus event for club members.",
+        date: "2026-08-18",
+        startTime: "5:30 PM",
+        endTime: "7:00 PM",
+        location: "Campus Center",
         rsvpCount: 0,
+        updatedAt: seededAt,
       });
 
       await setDoc(doc(database, "events/event-2"), {
         clubId: "club-1",
+        clubName: "Campus Club",
         title: "Second Campus Event",
+        description: "Another campus event for club members.",
+        date: "2026-08-25",
+        startTime: "5:30 PM",
+        endTime: "7:00 PM",
+        location: "Campus Center",
         rsvpCount: 0,
+        updatedAt: seededAt,
       });
 
       await setDoc(doc(database, "clubs/club-1"), {
         name: "Campus Club",
+        shortName: "CC",
+        category: "Technology",
         description: "A student organization.",
+        meetingSchedule: "Tuesdays at 5:30 PM",
+        meetingLocation: "Campus Center",
+        contactEmail: "club@farmingdale.edu",
+        tags: ["Technology"],
         status: "active",
         memberCount: 1,
+        updatedAt: seededAt,
       });
 
       await setDoc(doc(database, "announcements/announcement-1"), {
         clubId: "club-1",
+        clubName: "Campus Club",
         title: "Meeting reminder",
         body: "Meet in the student center.",
+        priority: "normal",
+        updatedAt: seededAt,
       });
 
       await setDoc(doc(database, "resources/resource-1"), {
         clubId: "club-1",
         title: "Club handbook",
         description: "Officer reference material.",
-        type: "link",
+        type: "Link",
         url: "https://example.com/handbook",
+        updatedAt: seededAt,
       });
     });
   });
@@ -557,6 +583,34 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
     await assertSucceeds(
       deleteDoc(doc(officerDb, "resources/resource-1")),
+    );
+  });
+
+  it("rejects malformed club content and protected counter changes", async () => {
+    const officerDb = verifiedContext("officer-1").firestore();
+    const eventRef = doc(officerDb, "events/event-1");
+
+    await assertFails(
+      updateDoc(eventRef, {
+        rsvpCount: 500,
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      updateDoc(eventRef, {
+        internalNote: "This field is not part of the event schema.",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      setDoc(doc(officerDb, "resources/invalid-resource"), {
+        clubId: "club-1",
+        title: "Invalid resource",
+        description: "Invalid type value.",
+        type: "Executable",
+        url: "https://example.com/resource",
+        updatedAt: serverTimestamp(),
+      }),
     );
   });
 
