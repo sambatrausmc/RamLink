@@ -15,6 +15,7 @@ export async function sendCurrentUserVerification() {
 // Calls our secure backend endpoint to wipe database records and delete the Auth account
 export async function deleteCurrentAccount(password: string) {
   const { auth } = await import("@/lib/firebase/client");
+  const { getAppCheckRequestHeaders } = await import("@/lib/firebase/app-check");
   const user = auth.currentUser;
   if (!user) throw new Error("Sign in before deleting an account.");
   if (!user.email) throw new Error("This account does not have an email address.");
@@ -22,11 +23,17 @@ export async function deleteCurrentAccount(password: string) {
 
   const credential = EmailAuthProvider.credential(user.email, password);
   await reauthenticateWithCredential(user, credential);
-  const idToken = await user.getIdToken(true);
+  const [idToken, appCheckHeaders] = await Promise.all([
+    user.getIdToken(true),
+    getAppCheckRequestHeaders(),
+  ]);
 
   const response = await fetch("/api/account", {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${idToken}` },
+    headers: {
+      ...appCheckHeaders,
+      Authorization: `Bearer ${idToken}`,
+    },
   });
 
   if (!response.ok) {

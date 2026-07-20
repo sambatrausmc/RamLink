@@ -7,6 +7,10 @@ const authMocks = vi.hoisted(() => ({
   signOut: vi.fn(),
 }));
 
+const appCheckMocks = vi.hoisted(() => ({
+  getHeaders: vi.fn(),
+}));
+
 vi.mock("@/lib/firebase/client", () => ({ auth: authMocks.auth }));
 
 vi.mock("firebase/auth", () => ({
@@ -14,6 +18,10 @@ vi.mock("firebase/auth", () => ({
   reauthenticateWithCredential: authMocks.reauthenticateWithCredential,
   sendEmailVerification: vi.fn(),
   signOut: authMocks.signOut,
+}));
+
+vi.mock("@/lib/firebase/app-check", () => ({
+  getAppCheckRequestHeaders: appCheckMocks.getHeaders,
 }));
 
 import { deleteCurrentAccount } from "@/lib/firebase/account-actions";
@@ -30,6 +38,9 @@ describe("account deletion reauthentication", () => {
     authMocks.credential.mockReturnValue({ provider: "password" });
     authMocks.reauthenticateWithCredential.mockResolvedValue(undefined);
     getIdToken.mockResolvedValue("fresh-token");
+    appCheckMocks.getHeaders.mockResolvedValue({
+      "X-Firebase-AppCheck": "app-check-token",
+    });
     authMocks.signOut.mockResolvedValue(undefined);
     vi.stubGlobal(
       "fetch",
@@ -52,7 +63,10 @@ describe("account deletion reauthentication", () => {
     expect(fetch).toHaveBeenCalledWith(
       "/api/account",
       expect.objectContaining({
-        headers: { Authorization: "Bearer fresh-token" },
+        headers: {
+          "X-Firebase-AppCheck": "app-check-token",
+          Authorization: "Bearer fresh-token",
+        },
       }),
     );
     expect(authMocks.signOut).toHaveBeenCalledWith(authMocks.auth);

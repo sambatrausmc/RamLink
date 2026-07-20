@@ -1,5 +1,6 @@
 import { getIdToken, type User } from "firebase/auth";
 import { CSRF_HEADER_NAME } from "@/lib/auth-session-contract";
+import { getAppCheckRequestHeaders } from "@/lib/firebase/app-check";
 
 type SessionResponse = {
   authenticated: boolean;
@@ -23,9 +24,11 @@ async function getCsrfToken() {
 }
 
 export async function readServerSession() {
+  const appCheckHeaders = await getAppCheckRequestHeaders();
   const response = await fetch("/api/auth/session", {
     cache: "no-store",
     credentials: "same-origin",
+    headers: appCheckHeaders,
   });
   if (response.status === 401) {
     return null;
@@ -37,15 +40,17 @@ export async function readServerSession() {
 }
 
 export async function createServerSession(user: User) {
-  const [csrfToken, idToken] = await Promise.all([
+  const [csrfToken, idToken, appCheckHeaders] = await Promise.all([
     getCsrfToken(),
     getIdToken(user, true),
+    getAppCheckRequestHeaders(),
   ]);
   const response = await fetch("/api/auth/session", {
     method: "POST",
     credentials: "same-origin",
     headers: {
       "content-type": "application/json",
+      ...appCheckHeaders,
       [CSRF_HEADER_NAME]: csrfToken,
     },
     body: JSON.stringify({ idToken }),
@@ -57,11 +62,14 @@ export async function createServerSession(user: User) {
 }
 
 export async function clearServerSession() {
-  const csrfToken = await getCsrfToken();
+  const [csrfToken, appCheckHeaders] = await Promise.all([
+    getCsrfToken(),
+    getAppCheckRequestHeaders(),
+  ]);
   const response = await fetch("/api/auth/session", {
     method: "DELETE",
     credentials: "same-origin",
-    headers: { [CSRF_HEADER_NAME]: csrfToken },
+    headers: { ...appCheckHeaders, [CSRF_HEADER_NAME]: csrfToken },
   });
 
   if (!response.ok) {
