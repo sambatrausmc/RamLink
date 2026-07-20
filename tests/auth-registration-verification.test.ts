@@ -151,7 +151,7 @@ describe("verified student registration", () => {
     expect(mocks.resetPassword).toHaveBeenCalledOnce();
   });
 
-  it("creates a server session after verified login", async () => {
+  it("leaves verified session synchronization to the auth provider", async () => {
     mocks.user.emailVerified = true;
     const { loginWithEmailAndPassword } = await import("@/lib/firebase/auth");
 
@@ -160,7 +160,7 @@ describe("verified student registration", () => {
       password: "password123",
     });
 
-    expect(mocks.createServerSession).toHaveBeenCalledWith(mocks.user);
+    expect(mocks.createServerSession).not.toHaveBeenCalled();
   });
 
   it("rejects unsupported login domains before Firebase authentication", async () => {

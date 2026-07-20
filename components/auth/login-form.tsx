@@ -47,14 +47,22 @@ export function LoginForm() {
 
     try {
       const nextUser = await loginWithEmailAndPassword({ email, password });
-      if (nextUser.emailVerified) {
-        await refreshSession();
+      if (!nextUser.emailVerified) {
+        router.replace("/verify-email");
+        router.refresh();
+        return;
       }
-      router.push(
-        nextUser.emailVerified
-          ? getRequestedWorkspace() ?? "/dashboard"
-          : "/verify-email",
-      );
+
+      const sessionReady = await refreshSession();
+      if (!sessionReady) {
+        setFeedback(
+          "Your password was accepted, but RamLink could not start a secure session. Please try again.",
+        );
+        return;
+      }
+
+      router.replace(getRequestedWorkspace() ?? "/dashboard");
+      router.refresh();
     } catch {
       setFeedback(
         "Unable to sign in. Check your email and password, then try again.",
