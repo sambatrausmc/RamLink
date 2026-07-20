@@ -1,0 +1,74 @@
+[
+  {
+    "id": "campus-coding-night",
+    "clubId": "cs-club",
+    "clubName": "Computer Programming Club",
+    "title": "Campus Coding Night",
+    "description": "Build a small team project and meet other student developers.",
+    "date": "2026-08-18",
+    "startTime": "5:30 PM",
+    "endTime": "8:00 PM",
+    "location": "Lupton Hall, Room 130",
+    "rsvpCount": 12
+  },
+  {
+    "id": "web-development-workshop",
+    "clubId": "cs-club",
+    "clubName": "Computer Programming Club",
+    "title": "Web Development Workshop",
+    "description": "Practice building an accessible web page with club mentors.",
+    "date": "2026-09-01",
+    "startTime": "6:00 PM",
+    "endTime": "7:30 PM",
+    "location": "Lupton Hall, Room 130",
+    "rsvpCount": 9
+  },
+  {
+    "id": "resume-review-workshop",
+    "clubId": "business-leaders",
+    "clubName": "Future Business Leaders",
+    "title": "Resume Review Workshop",
+    "description": "Receive practical feedback before the fall career fair.",
+    "date": "2026-08-20",
+    "startTime": "4:30 PM",
+    "endTime": "6:00 PM",
+    "location": "School of Business, Room 115",
+    "rsvpCount": 16
+  },
+  {
+    "id": "campus-cleanup-day",
+    "clubId": "green-campus",
+    "clubName": "Green Campus Coalition",
+    "title": "Campus Cleanup Day",
+    "description": "Volunteer with students to improve shared outdoor spaces.",
+    "date": "2026-08-22",
+    "startTime": "10:00 AM",
+    "endTime": "12:30 PM",
+    "location": "Campus Center Entrance",
+    "rsvpCount": 21
+  },
+  {
+    "id": "stress-less-workshop",
+    "clubId": "wellness-club",
+    "clubName": "Student Wellness Club",
+    "title": "Stress Less Workshop",
+    "description": "Learn practical planning and stress-management techniques.",
+    "date": "2026-08-24",
+    "startTime": "5:00 PM",
+    "endTime": "6:15 PM",
+    "location": "Nold Hall, Room 102",
+    "rsvpCount": 14
+  },
+  {
+    "id": "student-leadership-panel",
+    "clubId": "business-leaders",
+    "clubName": "Future Business Leaders",
+    "title": "Student Leadership Panel",
+    "description": "Hear campus leaders discuss teamwork and project planning.",
+    "date": "2026-09-03",
+    "startTime": "4:30 PM",
+    "endTime": "6:00 PM",
+    "location": "Campus Center Ballroom",
+    "rsvpCount": 28
+  }
+]

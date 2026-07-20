@@ -11,7 +11,11 @@
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "test:rules": "npx --yes firebase-tools@15.23.0 emulators:exec \"vitest --run tests/firestore-rules.test.ts\" --only firestore --project demo-ramlink",
-    "seed:firebase": "node --env-file=.env.local scripts/seed-firestore.mjs"
+    "provision:check": "node scripts/provision-demo-data.mjs --dry-run",
+    "provision:data": "node --env-file=.env.local scripts/provision-demo-data.mjs --confirm-project=csc325-firebase-app",
+    "provision:accounts": "node --env-file=.env.local scripts/provision-test-accounts.mjs --confirm-project=csc325-firebase-app",
+    "provision:workflows": "node --env-file=.env.local scripts/provision-demo-workflows.mjs --confirm-project=csc325-firebase-app",
+    "provision:all": "npm run provision:data && npm run provision:accounts && npm run provision:workflows"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

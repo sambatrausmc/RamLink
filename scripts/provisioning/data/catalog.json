@@ -1,0 +1,76 @@
+{
+  "interests": [
+    { "id": "technology", "name": "Technology", "category": "Technology" },
+    { "id": "leadership", "name": "Leadership", "category": "Leadership" },
+    { "id": "business", "name": "Business", "category": "Business" },
+    {
+      "id": "service",
+      "name": "Community Service",
+      "category": "Community Service"
+    },
+    { "id": "wellness", "name": "Health and Wellness", "category": "Health" },
+    { "id": "recreation", "name": "Recreation", "category": "Recreation" }
+  ],
+  "clubs": [
+    {
+      "id": "cs-club",
+      "name": "Computer Programming Club",
+      "shortName": "CPC",
+      "category": "Technology",
+      "description": "A community for students interested in coding, software development, and technology careers.",
+      "meetingSchedule": "Tuesdays at 6:00 PM",
+      "meetingLocation": "Lupton Hall, Room 130",
+      "contactEmail": "cpc@ramlink.example.com",
+      "tags": ["Coding", "Software", "Networking"],
+      "memberCount": 24,
+      "status": "active",
+      "isSuggested": true,
+      "nextEventId": "campus-coding-night"
+    },
+    {
+      "id": "business-leaders",
+      "name": "Future Business Leaders",
+      "shortName": "FBL",
+      "category": "Business",
+      "description": "Students develop leadership, presentation, and professional networking skills.",
+      "meetingSchedule": "Wednesdays at 4:30 PM",
+      "meetingLocation": "School of Business, Room 115",
+      "contactEmail": "fbl@ramlink.example.com",
+      "tags": ["Leadership", "Careers", "Business"],
+      "memberCount": 31,
+      "status": "active",
+      "isSuggested": true,
+      "nextEventId": "resume-review-workshop"
+    },
+    {
+      "id": "green-campus",
+      "name": "Green Campus Coalition",
+      "shortName": "GCC",
+      "category": "Community Service",
+      "description": "A service organization focused on sustainability and campus improvement projects.",
+      "meetingSchedule": "Thursdays at 3:30 PM",
+      "meetingLocation": "Campus Center, Room 220",
+      "contactEmail": "green@ramlink.example.com",
+      "tags": ["Service", "Sustainability", "Campus"],
+      "memberCount": 18,
+      "status": "active",
+      "isSuggested": false,
+      "nextEventId": "campus-cleanup-day"
+    },
+    {
+      "id": "wellness-club",
+      "name": "Student Wellness Club",
+      "shortName": "SWC",
+      "category": "Health",
+      "description": "Students promote healthy habits, stress management, and supportive campus connections.",
+      "meetingSchedule": "Mondays at 5:00 PM",
+      "meetingLocation": "Nold Hall, Room 102",
+      "contactEmail": "wellness@ramlink.example.com",
+      "tags": ["Wellness", "Health", "Community"],
+      "memberCount": 27,
+      "status": "active",
+      "isSuggested": true,
+      "nextEventId": "stress-less-workshop"
+    }
+  ]
+}
