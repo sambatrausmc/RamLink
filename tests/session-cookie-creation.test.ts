@@ -36,6 +36,7 @@ function createRequest(csrfToken = createCsrfToken()) {
       cookie: `${CSRF_COOKIE_NAME}=${csrfToken}`,
       [CSRF_HEADER_NAME]: csrfToken,
       origin: "https://ramlink.example",
+      "x-request-id": "request_12345",
     },
   });
 }
@@ -73,6 +74,7 @@ describe("Firebase server session creation", () => {
     );
     expect(response.headers.get("set-cookie")).toContain("HttpOnly");
     expect(response.headers.get("set-cookie")).toContain("SameSite=lax");
+    expect(response.headers.get("x-request-id")).toBe("request_12345");
   });
 
   it("rejects a request without valid CSRF proof", async () => {

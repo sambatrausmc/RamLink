@@ -70,7 +70,10 @@ import { DELETE } from "@/app/api/account/route";
 function deletionRequest(token?: string) {
   return new Request("http://localhost/api/account", {
     method: "DELETE",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "x-request-id": "request_12345",
+    },
   });
 }
 
@@ -178,6 +181,7 @@ describe("account deletion API", () => {
     const response = await DELETE(deletionRequest("fresh-token"));
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("x-request-id")).toBe("request_12345");
     expect(adminMocks.transaction.update).toHaveBeenCalledWith(
       reference("clubs/club-1"),
       { memberCount: 2 },
