@@ -17,6 +17,24 @@ type EventCardProps = {
   actionMode?: "workspace" | "public";
 };
 
+function getRsvpErrorMessage(error: unknown) {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String(error.code)
+      : "";
+
+  if (code === "permission-denied") {
+    return "Your profile could not update this RSVP. Sign out, sign back in, and try again.";
+  }
+  if (code === "not-found") {
+    return "This event is no longer available.";
+  }
+  if (code === "unavailable") {
+    return "The RSVP service is temporarily unavailable. Try again shortly.";
+  }
+  return "Unable to update RSVP right now.";
+}
+
 export function EventCard({ event, compact = false, actionMode = "workspace" }: EventCardProps) {
   const { profile, user } = useAuth();
   
@@ -65,8 +83,12 @@ export function EventCard({ event, compact = false, actionMode = "workspace" }: 
       setRsvpOverride(nextRsvp);
       setRsvpCountAdjustment((current) => current + (nextRsvp ? 1 : -1));
       setFeedback(nextRsvp ? "RSVP saved." : "RSVP removed.");
-    } catch {
-      setFeedback("Unable to update RSVP right now.");
+    } catch (error) {
+      console.error("Unable to update event RSVP.", {
+        error,
+        eventId: event.id,
+      });
+      setFeedback(getRsvpErrorMessage(error));
     } finally {
       setIsRsvping(false);
     }
