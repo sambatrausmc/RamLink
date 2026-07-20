@@ -1,6 +1,7 @@
 import {
   doc,
   getDoc,
+  onSnapshot,
   runTransaction,
   serverTimestamp,
   updateDoc,
@@ -121,6 +122,25 @@ export async function getStudentProfile(uid: string) {
     return null;
   }
   return normalizeStudentProfile(snapshot.id, snapshot.data());
+}
+
+export async function subscribeToStudentProfile(
+  uid: string,
+  onProfile: (profile: StudentProfile | null) => void,
+  onError: () => void,
+) {
+  const db = await getDb();
+  return onSnapshot(
+    doc(db, COLLECTIONS.users, uid),
+    (snapshot) => {
+      onProfile(
+        snapshot.exists()
+          ? normalizeStudentProfile(snapshot.id, snapshot.data())
+          : null,
+      );
+    },
+    onError,
+  );
 }
 
 export async function updateStudentProfile(
