@@ -55,6 +55,7 @@ describe("protected workspace proxy", () => {
     ["//attacker.example/path", null],
     ["/\\attacker.example", null],
     ["/login?next=/dashboard", null],
+    ["/verification-complete", null],
     ["/verify-email", null],
     ["/dashboard?tab=events", "/dashboard?tab=events"],
   ])("sanitizes a requested destination", (value, expected) => {
