@@ -15,7 +15,9 @@
     "provision:data": "node --env-file=.env.local scripts/provision-demo-data.mjs --confirm-project=csc325-firebase-app",
     "provision:accounts": "node --env-file=.env.local scripts/provision-test-accounts.mjs --confirm-project=csc325-firebase-app",
     "provision:workflows": "node --env-file=.env.local scripts/provision-demo-workflows.mjs --confirm-project=csc325-firebase-app",
-    "provision:all": "npm run provision:data && npm run provision:accounts && npm run provision:workflows"
+    "provision:all": "npm run provision:data && npm run provision:accounts && npm run provision:workflows",
+    "migrate:profiles:check": "node --env-file=.env.local scripts/migrate-user-profile-schema.mjs --confirm-project=csc325-firebase-app",
+    "migrate:profiles": "node --env-file=.env.local scripts/migrate-user-profile-schema.mjs --confirm-project=csc325-firebase-app --apply"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

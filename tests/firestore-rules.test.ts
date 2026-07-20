@@ -383,6 +383,67 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     expect(eventSnapshot.data()?.rsvpCount).toBe(0);
   });
 
+  it("allows a legacy student to RSVP after profile reconciliation", async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const seededAt = new Date("2026-07-01T12:00:00Z");
+
+      await setDoc(doc(database, "users/legacy-student"), {
+        id: "legacy-student",
+        role: "student",
+        displayName: "Legacy Student",
+        email: "legacy-student@farmingdale.edu",
+        major: "Computer Programming",
+        classYear: "Senior",
+        interests: ["Technology"],
+        joinedClubIds: [],
+        savedClubIds: [],
+        savedEventIds: [],
+        createdAt: seededAt,
+        updatedAt: seededAt,
+      });
+    });
+
+    const legacyDb = verifiedContext("legacy-student").firestore();
+    const deniedBatch = writeBatch(legacyDb);
+    deniedBatch.update(doc(legacyDb, "users/legacy-student"), {
+      rsvpedEventIds: arrayUnion("event-1"),
+      rsvpMutation: { eventId: "event-1", countChange: 1 },
+      updatedAt: serverTimestamp(),
+    });
+    deniedBatch.update(doc(legacyDb, "events/event-1"), {
+      rsvpCount: 1,
+      updatedAt: serverTimestamp(),
+    });
+    await assertFails(deniedBatch.commit());
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), "users/legacy-student"), {
+        rsvpedEventIds: [],
+        managedClubIds: [],
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    const reconciledBatch = writeBatch(legacyDb);
+    reconciledBatch.update(doc(legacyDb, "users/legacy-student"), {
+      rsvpedEventIds: arrayUnion("event-1"),
+      rsvpMutation: { eventId: "event-1", countChange: 1 },
+      updatedAt: serverTimestamp(),
+    });
+    reconciledBatch.update(doc(legacyDb, "events/event-1"), {
+      rsvpCount: 1,
+      updatedAt: serverTimestamp(),
+    });
+    await assertSucceeds(reconciledBatch.commit());
+
+    const profile = await getDoc(
+      doc(legacyDb, "users/legacy-student"),
+    );
+    expect(profile.data()?.interests).toEqual(["Technology"]);
+    expect(profile.data()?.rsvpedEventIds).toEqual(["event-1"]);
+  });
+
   it("reserves join request cancellation for the protected API", async () => {
     const studentDb = verifiedContext("student-1").firestore();
     const unrelatedDb = verifiedContext("unrelated-1").firestore();

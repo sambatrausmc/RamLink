@@ -4,6 +4,7 @@ import { CSRF_COOKIE_NAME, verifyCsrfRequest } from "@/lib/server/csrf";
 import { verifyAppCheckRequest } from "@/lib/server/app-check";
 import { consumeRateLimit } from "@/lib/server/rate-limit";
 import { getRequestId, logServerEvent } from "@/lib/server/logger";
+import { reconcileUserProfileSchema } from "@/lib/server/user-profile-schema";
 import {
   getExpiredSessionCookieOptions,
   getSessionCookieOptions,
@@ -126,6 +127,13 @@ export async function POST(request: NextRequest) {
         429,
         { "Retry-After": String(rateLimit.retryAfterSeconds) },
       );
+    }
+
+    const profileStatus = await reconcileUserProfileSchema(decodedToken.uid);
+    if (profileStatus === "updated") {
+      logServerEvent("info", "user_profile_schema_reconciled", requestId, {
+        operation: "session_create",
+      });
     }
 
     const sessionCookie = await auth.createSessionCookie(body.idToken, {

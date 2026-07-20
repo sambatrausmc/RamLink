@@ -8,6 +8,7 @@ const adminMocks = vi.hoisted(() => ({
 
 const appCheckMocks = vi.hoisted(() => ({ verify: vi.fn() }));
 const rateLimitMocks = vi.hoisted(() => ({ consume: vi.fn() }));
+const profileSchemaMocks = vi.hoisted(() => ({ reconcile: vi.fn() }));
 
 vi.mock("@/lib/firebase/admin", () => ({
   getAdminAuth: () => adminMocks,
@@ -19,6 +20,10 @@ vi.mock("@/lib/server/app-check", () => ({
 
 vi.mock("@/lib/server/rate-limit", () => ({
   consumeRateLimit: rateLimitMocks.consume,
+}));
+
+vi.mock("@/lib/server/user-profile-schema", () => ({
+  reconcileUserProfileSchema: profileSchemaMocks.reconcile,
 }));
 
 import { POST } from "@/app/api/auth/session/route";
@@ -56,6 +61,7 @@ describe("Firebase server session creation", () => {
     vi.clearAllMocks();
     appCheckMocks.verify.mockResolvedValue(true);
     rateLimitMocks.consume.mockResolvedValue({ allowed: true });
+    profileSchemaMocks.reconcile.mockResolvedValue("current");
     adminMocks.verifyIdToken.mockResolvedValue(verifiedToken());
     adminMocks.createSessionCookie.mockResolvedValue("signed-session-cookie");
   });
@@ -69,12 +75,23 @@ describe("Firebase server session creation", () => {
       "firebase-id-token",
       { expiresIn: 432000000 },
     );
+    expect(profileSchemaMocks.reconcile).toHaveBeenCalledWith("student-1");
     expect(response.cookies.get(SESSION_COOKIE_NAME)?.value).toBe(
       "signed-session-cookie",
     );
     expect(response.headers.get("set-cookie")).toContain("HttpOnly");
     expect(response.headers.get("set-cookie")).toContain("SameSite=lax");
     expect(response.headers.get("x-request-id")).toBe("request_12345");
+  });
+
+  it("reconciles legacy profile fields before creating the session", async () => {
+    profileSchemaMocks.reconcile.mockResolvedValue("updated");
+
+    const response = await POST(createRequest());
+
+    expect(response.status).toBe(200);
+    expect(profileSchemaMocks.reconcile).toHaveBeenCalledWith("student-1");
+    expect(adminMocks.createSessionCookie).toHaveBeenCalledOnce();
   });
 
   it("rejects a request without valid CSRF proof", async () => {
