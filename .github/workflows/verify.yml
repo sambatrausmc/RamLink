@@ -1,0 +1,57 @@
+name: Verify release
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FIREBASE_PROJECT_ID: demo-ramlink
+      NEXT_PUBLIC_FIREBASE_API_KEY: test-api-key
+      NEXT_PUBLIC_FIREBASE_APP_ID: test-app-id
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: demo-ramlink.firebaseapp.com
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "123456789"
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: demo-ramlink
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: demo-ramlink.appspot.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test application
+        run: npm run test -- --run
+
+      - name: Test Firestore rules
+        run: npm run test:rules
+
+      - name: Build production application
+        run: npm run build
