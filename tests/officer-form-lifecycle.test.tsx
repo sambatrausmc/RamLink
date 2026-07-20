@@ -72,4 +72,38 @@ describe("officer form lifecycle", () => {
     });
     expect((title as HTMLInputElement).value).toBe("");
   });
+
+  it("keeps event write success when the list refresh fails", async () => {
+    mocks.getEvents
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("refresh failed"));
+    render(<ClubEventsClient />);
+    const title = await screen.findByPlaceholderText("Event title");
+
+    fireEvent.submit(title.closest("form") as HTMLFormElement);
+
+    expect(
+      await screen.findByText(
+        "Event published to Firestore. Reload the page to refresh the list.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText("Unable to create the event.")).toBeNull();
+  });
+
+  it("keeps resource write success when the list refresh fails", async () => {
+    mocks.getResources
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("refresh failed"));
+    render(<ClubResourcesClient />);
+    const title = await screen.findByPlaceholderText("Resource title");
+
+    fireEvent.submit(title.closest("form") as HTMLFormElement);
+
+    expect(
+      await screen.findByText(
+        "Resource saved to Firestore. Reload the page to refresh the list.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText("Unable to add the resource.")).toBeNull();
+  });
 });

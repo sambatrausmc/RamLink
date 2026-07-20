@@ -53,4 +53,22 @@ describe("club announcement form", () => {
     expect((title as HTMLInputElement).value).toBe("");
     expect((body as HTMLTextAreaElement).value).toBe("");
   });
+
+  it("reports a successful publish when only the list refresh fails", async () => {
+    mocks.getAnnouncements
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("refresh failed"));
+    render(<ClubAnnouncementsClient />);
+    const title = await screen.findByPlaceholderText("Announcement title");
+    fireEvent.change(title, { target: { value: "Weekly meeting" } });
+
+    fireEvent.submit(title.closest("form") as HTMLFormElement);
+
+    expect(
+      await screen.findByText(
+        "Announcement published to Firestore. Reload the page to refresh the list.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText("Unable to publish the announcement.")).toBeNull();
+  });
 });
