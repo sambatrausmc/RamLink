@@ -47,4 +47,17 @@ describe("administrative workflow audit logs", () => {
     expect(mocks.batch.update).toHaveBeenCalledOnce();
     expect(mocks.batch.commit).toHaveBeenCalledOnce();
   });
+
+  it("clears managed clubs in the same write when removing officer access", async () => {
+    await updateUserRole("student-1", "student");
+
+    expect(mocks.batch.update).toHaveBeenCalledWith(
+      { path: "users/student-1" },
+      expect.objectContaining({
+        role: "student",
+        managedClubIds: [],
+      }),
+    );
+    expect(mocks.batch.commit).toHaveBeenCalledOnce();
+  });
 });
