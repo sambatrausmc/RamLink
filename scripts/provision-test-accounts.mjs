@@ -7,33 +7,11 @@ import {
   readAccountCredentials,
   testAccounts,
 } from "./provisioning/test-accounts.mjs";
-
-async function upsertAuthUser(account, email, password) {
-  try {
-    const existingUser = await adminAuth.getUserByEmail(email);
-    return adminAuth.updateUser(existingUser.uid, {
-      displayName: account.displayName,
-      emailVerified: true,
-      password,
-      disabled: false,
-    });
-  } catch (error) {
-    if (error?.code !== "auth/user-not-found") {
-      throw error;
-    }
-    return adminAuth.createUser({
-      uid: account.uid,
-      email,
-      password,
-      displayName: account.displayName,
-      emailVerified: true,
-    });
-  }
-}
+import { upsertAuthUser } from "./provisioning/auth-users.mjs";
 
 async function provisionAccount(account) {
   const { email, password } = readAccountCredentials(account);
-  const user = await upsertAuthUser(account, email, password);
+  const user = await upsertAuthUser(adminAuth, account, email, password);
 
   await adminDb.collection("users").doc(user.uid).set({
     id: user.uid,
