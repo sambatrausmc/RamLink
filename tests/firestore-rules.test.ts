@@ -737,7 +737,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
     );
   });
 
-  it("accepts only authenticated reports owned by the reporter", async () => {
+  it("reserves report submission for the protected API", async () => {
     const studentDb = verifiedContext("student-1").firestore();
     const anonymousDb = testEnvironment.unauthenticatedContext().firestore();
     const validReport = {
@@ -751,7 +751,7 @@ describe.skipIf(!emulatorAddress)("Firestore workflow authorization", () => {
       updatedAt: serverTimestamp(),
     };
 
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(studentDb, "reports/report-1"), validReport),
     );
     await assertFails(

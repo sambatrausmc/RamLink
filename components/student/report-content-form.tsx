@@ -12,7 +12,7 @@ import type { Report } from "@/lib/types";
 type ContentType = Report["contentType"];
 
 export function ReportContentForm() {
-  const { profile, user } = useAuth();
+  const { user } = useAuth();
   const [contentType, setContentType] = useState<ContentType>("Announcement");
   const [contentTitle, setContentTitle] = useState("");
   const [reason, setReason] = useState("");
@@ -27,8 +27,6 @@ export function ReportContentForm() {
     setFeedback("");
     try {
       await submitContentReport({
-        reporterId: user.uid,
-        reporterName: profile?.displayName || user.displayName || "RamLink user",
         contentType,
         contentTitle: contentTitle.trim(),
         reason: reason.trim(),

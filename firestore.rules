@@ -585,45 +585,6 @@ service cloud.firestore {
         ]);
     }
 
-    function validNewReport() {
-      let data = request.resource.data;
-      return isVerifiedFarmingdaleUser() &&
-        data.keys().hasAll([
-          "reporterId",
-          "reporterName",
-          "contentType",
-          "contentTitle",
-          "reason",
-          "status",
-          "createdAt",
-          "updatedAt"
-        ]) &&
-        data.keys().hasOnly([
-          "reporterId",
-          "reporterName",
-          "contentType",
-          "contentTitle",
-          "reason",
-          "status",
-          "createdAt",
-          "updatedAt"
-        ]) &&
-        data.reporterId == request.auth.uid &&
-        data.reporterName is string &&
-        data.reporterName.size() > 0 &&
-        data.reporterName.size() <= 100 &&
-        data.contentType in ["Announcement", "Event", "Resource", "Club Profile"] &&
-        data.contentTitle is string &&
-        data.contentTitle.size() > 0 &&
-        data.contentTitle.size() <= 160 &&
-        data.reason is string &&
-        data.reason.size() > 0 &&
-        data.reason.size() <= 2000 &&
-        data.status == "new" &&
-        data.createdAt == request.time &&
-        data.updatedAt == request.time;
-    }
-
     function validNewAuditLog() {
       let data = request.resource.data;
       let adminActions = [
@@ -820,7 +781,7 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      allow create: if validNewReport();
+      allow create: if false;
       allow read, update, delete: if isAdmin();
     }
 
