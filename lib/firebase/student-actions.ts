@@ -257,42 +257,22 @@ export async function createJoinRequest(
     `${input.userId}_${input.clubId}`,
   );
   const notificationRef = doc(collection(db, COLLECTIONS.notifications));
+  const batch = writeBatch(db);
 
-  await runTransaction(db, async (transaction) => {
-    const currentRequest = await transaction.get(requestRef);
-    if (
-      currentRequest.exists() &&
-      (currentRequest.data().status === "pending" ||
-        currentRequest.data().status === "approved")
-    ) {
-      throw new Error("An active join request already exists for this club.");
-    }
-
-    if (currentRequest.exists()) {
-      if (currentRequest.data().status !== "rejected") {
-        throw new Error("This join request cannot be resubmitted.");
-      }
-      transaction.update(requestRef, {
-        message: request.message,
-        status: request.status,
-        createdAt: request.createdAt,
-        updatedAt: request.updatedAt,
-      });
-    } else {
-      transaction.set(requestRef, request);
-    }
-
-    transaction.set(notificationRef, {
-      userId: input.userId,
-      clubId: input.clubId,
-      title: "Join request sent",
-      body: "Your membership request was sent to the club officers.",
-      type: "joinRequest",
-      status: "unread",
-      relatedHref: "/dashboard",
-      createdAt: serverTimestamp(),
-    });
+  // Security rules reject overwriting active requests and permit rejected
+  // requests to reopen. Avoid reading a new document before it exists.
+  batch.set(requestRef, request, { merge: true });
+  batch.set(notificationRef, {
+    userId: input.userId,
+    clubId: input.clubId,
+    title: "Join request sent",
+    body: "Your membership request was sent to the club officers.",
+    type: "joinRequest",
+    status: "unread",
+    relatedHref: "/dashboard",
+    createdAt: serverTimestamp(),
   });
+  await batch.commit();
 
   return {
     id: requestRef.id,

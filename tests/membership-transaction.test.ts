@@ -82,12 +82,24 @@ describe("membership approval transaction", () => {
       { path: "users/student-1" },
       expect.objectContaining({
         joinedClubIds: { operation: "union", value: "club-1" },
+        membershipMutation: {
+          requestId: "request-1",
+          studentId: "student-1",
+          clubId: "club-1",
+          countChange: 1,
+        },
       }),
     );
     expect(firestoreMocks.transaction.update).toHaveBeenCalledWith(
       { path: "clubs/club-1" },
       expect.objectContaining({
         memberCount: { operation: "increment", value: 1 },
+        membershipMutation: {
+          requestId: "request-1",
+          studentId: "student-1",
+          clubId: "club-1",
+          countChange: 1,
+        },
       }),
     );
     expect(firestoreMocks.transaction.set).toHaveBeenCalledWith(

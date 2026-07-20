@@ -51,17 +51,50 @@ service cloud.firestore {
           clubId in userDoc().data.managedClubIds);
     }
 
-    // Restricts officer updates on student profiles to modifying only memberships of clubs they manage
-    function officerUpdatesManagedMembership() {
+    // Couples officer membership edits to the matching request and club count.
+    function officerUpdatesManagedMembership(userId) {
       let changedFields = request.resource.data.diff(resource.data).affectedKeys();
       let oldClubs = resource.data.joinedClubIds.toSet();
       let newClubs = request.resource.data.joinedClubIds.toSet();
       let addedClubs = newClubs.difference(oldClubs);
       let removedClubs = oldClubs.difference(newClubs);
+      let mutation = request.resource.data.membershipMutation;
+      let requestPath = /databases/$(database)/documents/joinRequests/$(mutation.requestId);
+      let clubPath = /databases/$(database)/documents/clubs/$(mutation.clubId);
       return isOfficer() &&
-        changedFields.hasOnly(["joinedClubIds", "updatedAt"]) &&
-        addedClubs.hasOnly(userDoc().data.managedClubIds) &&
-        removedClubs.hasOnly(userDoc().data.managedClubIds);
+        "membershipMutation" in request.resource.data &&
+        mutation.requestId is string &&
+        mutation.studentId == userId &&
+        mutation.clubId is string &&
+        mutation.clubId in userDoc().data.managedClubIds &&
+        mutation.countChange in [-1, 1] &&
+        changedFields.hasOnly([
+          "joinedClubIds",
+          "membershipMutation",
+          "updatedAt"
+        ]) &&
+        exists(requestPath) &&
+        existsAfter(requestPath) &&
+        get(requestPath).data.studentId == userId &&
+        get(requestPath).data.clubId == mutation.clubId &&
+        exists(clubPath) &&
+        existsAfter(clubPath) &&
+        getAfter(clubPath).data.memberCount ==
+          get(clubPath).data.memberCount + mutation.countChange &&
+        (
+          (mutation.countChange == 1 &&
+            get(requestPath).data.status != "approved" &&
+            getAfter(requestPath).data.status == "approved" &&
+            addedClubs.hasOnly([mutation.clubId]) &&
+            addedClubs.size() == 1 &&
+            removedClubs.size() == 0) ||
+          (mutation.countChange == -1 &&
+            get(requestPath).data.status == "approved" &&
+            getAfter(requestPath).data.status != "approved" &&
+            removedClubs.hasOnly([mutation.clubId]) &&
+            removedClubs.size() == 1 &&
+            addedClubs.size() == 0)
+        );
     }
 
     // Officers may only view students who belong to one of their managed clubs.
@@ -244,6 +277,73 @@ service cloud.firestore {
         changedFields.hasOnly(["message", "status", "createdAt", "updatedAt"]);
     }
 
+    function officerUpdatesJoinRequestStatus() {
+      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+      let studentPath = /databases/$(database)/documents/users/$(resource.data.studentId);
+      let clubPath = /databases/$(database)/documents/clubs/$(resource.data.clubId);
+      return managesClub(resource.data.clubId) &&
+        request.resource.data.clubId == resource.data.clubId &&
+        request.resource.data.studentId == resource.data.studentId &&
+        request.resource.data.status in ["approved", "rejected"] &&
+        changedFields.hasOnly(["status", "updatedAt"]) &&
+        (
+          (resource.data.status != "approved" &&
+            request.resource.data.status != "approved") ||
+          (resource.data.status == "approved" &&
+            request.resource.data.status == "approved") ||
+          (resource.data.status != "approved" &&
+            request.resource.data.status == "approved" &&
+            !(resource.data.clubId in get(studentPath).data.joinedClubIds) &&
+            resource.data.clubId in getAfter(studentPath).data.joinedClubIds &&
+            getAfter(clubPath).data.memberCount ==
+              get(clubPath).data.memberCount + 1) ||
+          (resource.data.status == "approved" &&
+            request.resource.data.status != "approved" &&
+            resource.data.clubId in get(studentPath).data.joinedClubIds &&
+            !(resource.data.clubId in getAfter(studentPath).data.joinedClubIds) &&
+            getAfter(clubPath).data.memberCount ==
+              get(clubPath).data.memberCount - 1)
+        );
+    }
+
+    function officerUpdatesMembershipCount(clubId) {
+      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+      let mutation = request.resource.data.membershipMutation;
+      let requestPath = /databases/$(database)/documents/joinRequests/$(mutation.requestId);
+      let studentPath = /databases/$(database)/documents/users/$(mutation.studentId);
+      let countChange = request.resource.data.memberCount - resource.data.memberCount;
+      return isOfficer() &&
+        "membershipMutation" in request.resource.data &&
+        mutation.requestId is string &&
+        mutation.studentId is string &&
+        mutation.clubId == clubId &&
+        clubId in userDoc().data.managedClubIds &&
+        mutation.countChange in [-1, 1] &&
+        countChange == mutation.countChange &&
+        request.resource.data.memberCount >= 0 &&
+        changedFields.hasOnly([
+          "memberCount",
+          "membershipMutation",
+          "updatedAt"
+        ]) &&
+        exists(requestPath) &&
+        existsAfter(requestPath) &&
+        get(requestPath).data.studentId == mutation.studentId &&
+        get(requestPath).data.clubId == clubId &&
+        (
+          (countChange == 1 &&
+            get(requestPath).data.status != "approved" &&
+            getAfter(requestPath).data.status == "approved" &&
+            !(clubId in get(studentPath).data.joinedClubIds) &&
+            clubId in getAfter(studentPath).data.joinedClubIds) ||
+          (countChange == -1 &&
+            get(requestPath).data.status == "approved" &&
+            getAfter(requestPath).data.status != "approved" &&
+            clubId in get(studentPath).data.joinedClubIds &&
+            !(clubId in getAfter(studentPath).data.joinedClubIds))
+        );
+    }
+
     // Officers may edit club profile details, but lifecycle and count fields stay admin-only.
     function officerUpdatesManagedClubProfile(clubId) {
       let changedFields = request.resource.data.diff(resource.data).affectedKeys();
@@ -362,7 +462,9 @@ service cloud.firestore {
     match /clubs/{clubId} {
       allow read: if true;
       allow create, delete: if isAdmin();
-      allow update: if isAdmin() || officerUpdatesManagedClubProfile(clubId);
+      allow update: if isAdmin() ||
+        officerUpdatesManagedClubProfile(clubId) ||
+        officerUpdatesMembershipCount(clubId);
     }
 
     match /events/{eventId} {
@@ -403,7 +505,7 @@ service cloud.firestore {
         selfUpdatesAllowedProfileFields(userId) ||
         studentUpdatesOwnRsvpProfile(userId) ||
         isAdmin() ||
-        officerUpdatesManagedMembership();
+        officerUpdatesManagedMembership(userId);
       allow delete: if isAdmin();
     }
 
@@ -412,12 +514,7 @@ service cloud.firestore {
       allow read: if isVerifiedFarmingdaleUser() &&
         (resource.data.studentId == request.auth.uid || managesClub(resource.data.clubId));
       allow update: if
-        (managesClub(resource.data.clubId) &&
-          request.resource.data.clubId == resource.data.clubId &&
-          request.resource.data.studentId == resource.data.studentId &&
-          request.resource.data.status in ["approved", "rejected"] &&
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["status", "updatedAt"])) ||
+        officerUpdatesJoinRequestStatus() ||
         studentReopensRejectedRequest(requestId);
       allow delete: if isAdmin() ||
         (isVerifiedFarmingdaleUser() &&
