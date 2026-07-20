@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { DocumentReference, Firestore } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
+import { verifyAppCheckRequest } from "@/lib/server/app-check";
 
 // List of Firestore collections and fields where the user owns records
 const ownedRecords = [
@@ -100,6 +101,13 @@ function isMissingAuthUser(error: unknown) {
 }
 
 export async function DELETE(request: Request) {
+  if (!(await verifyAppCheckRequest(request))) {
+    return NextResponse.json(
+      { error: "Invalid application token." },
+      { status: 401 },
+    );
+  }
+
   const authorization = request.headers.get("authorization");
   if (!authorization?.startsWith("Bearer ")) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });

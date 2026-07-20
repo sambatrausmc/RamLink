@@ -5,8 +5,9 @@ import {
   ReCaptchaEnterpriseProvider,
   type AppCheck,
 } from "firebase/app-check";
+import { APP_CHECK_HEADER_NAME } from "@/lib/app-check-contract";
 
-export const APP_CHECK_HEADER_NAME = "X-Firebase-AppCheck";
+export { APP_CHECK_HEADER_NAME };
 
 let appCheckInstance: AppCheck | null = null;
 

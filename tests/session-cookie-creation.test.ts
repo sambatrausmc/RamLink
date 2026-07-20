@@ -6,8 +6,14 @@ const adminMocks = vi.hoisted(() => ({
   verifyIdToken: vi.fn(),
 }));
 
+const appCheckMocks = vi.hoisted(() => ({ verify: vi.fn() }));
+
 vi.mock("@/lib/firebase/admin", () => ({
   getAdminAuth: () => adminMocks,
+}));
+
+vi.mock("@/lib/server/app-check", () => ({
+  verifyAppCheckRequest: appCheckMocks.verify,
 }));
 
 import { POST } from "@/app/api/auth/session/route";
@@ -42,6 +48,7 @@ function verifiedToken(overrides: Record<string, unknown> = {}) {
 describe("Firebase server session creation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    appCheckMocks.verify.mockResolvedValue(true);
     adminMocks.verifyIdToken.mockResolvedValue(verifiedToken());
     adminMocks.createSessionCookie.mockResolvedValue("signed-session-cookie");
   });
@@ -71,6 +78,15 @@ describe("Firebase server session creation", () => {
     );
 
     expect(response.status).toBe(403);
+    expect(adminMocks.verifyIdToken).not.toHaveBeenCalled();
+  });
+
+  it("rejects a request without valid application proof", async () => {
+    appCheckMocks.verify.mockResolvedValue(false);
+
+    const response = await POST(createRequest());
+
+    expect(response.status).toBe(401);
     expect(adminMocks.verifyIdToken).not.toHaveBeenCalled();
   });
 

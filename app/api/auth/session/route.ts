@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebase/admin";
 import { CSRF_COOKIE_NAME, verifyCsrfRequest } from "@/lib/server/csrf";
+import { verifyAppCheckRequest } from "@/lib/server/app-check";
 import {
   getExpiredSessionCookieOptions,
   getSessionCookieOptions,
@@ -27,6 +28,10 @@ function clearSessionCookie(response: NextResponse) {
 }
 
 export async function GET(request: NextRequest) {
+  if (!(await verifyAppCheckRequest(request))) {
+    return sessionResponse({ error: "Invalid application token." }, 401);
+  }
+
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionCookie) {
     return sessionResponse({ authenticated: false }, 401);
@@ -52,6 +57,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await verifyAppCheckRequest(request))) {
+    return sessionResponse({ error: "Invalid application token." }, 401);
+  }
+
   if (
     !verifyCsrfRequest(
       request,
@@ -96,6 +105,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  if (!(await verifyAppCheckRequest(request))) {
+    return sessionResponse({ error: "Invalid application token." }, 401);
+  }
+
   if (
     !verifyCsrfRequest(
       request,

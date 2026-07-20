@@ -48,9 +48,15 @@ const adminMocks = vi.hoisted(() => {
   };
 });
 
+const appCheckMocks = vi.hoisted(() => ({ verify: vi.fn() }));
+
 vi.mock("@/lib/firebase/admin", () => ({
   getAdminAuth: () => adminMocks.auth,
   getAdminDb: () => adminMocks.db,
+}));
+
+vi.mock("@/lib/server/app-check", () => ({
+  verifyAppCheckRequest: appCheckMocks.verify,
 }));
 
 import { DELETE } from "@/app/api/account/route";
@@ -69,6 +75,7 @@ function reference(path: string): TestReference {
 describe("account deletion API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    appCheckMocks.verify.mockResolvedValue(true);
     adminMocks.batchCommits.length = 0;
     adminMocks.batchDeletes.length = 0;
     adminMocks.state.batchFailureAt = -1;
@@ -113,6 +120,15 @@ describe("account deletion API", () => {
   it("returns 401 when authentication is missing", async () => {
     const response = await DELETE(deletionRequest());
     expect(response.status).toBe(401);
+  });
+
+  it("returns 401 when App Check validation fails", async () => {
+    appCheckMocks.verify.mockResolvedValue(false);
+
+    const response = await DELETE(deletionRequest("fresh-token"));
+
+    expect(response.status).toBe(401);
+    expect(adminMocks.auth.verifyIdToken).not.toHaveBeenCalled();
   });
 
   it("returns 401 for an invalid token", async () => {
